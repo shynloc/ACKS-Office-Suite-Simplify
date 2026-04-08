@@ -1,0 +1,50 @@
+
+# 敏感文件
+.env
+*.log
+*.key
+secrets.*
+email_config.json
+*.pem
+*.pub
+
+# 临时文件
+__pycache__/
+*.pyc
+.DS_Store
+*.tmp
+*.temp
+*.swp
+*~
+
+# 编辑器配置
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 测试生成的文档
+*.docx
+*.xlsx
+*.pptx
+*.pdf
+test_output/
+output/
+temp/
+attachments/
+
+# Python打包
+dist/
+build/
+*.egg-info/
+*.egg
+eggs/
+wheels/
+pip-wheel-metadata/
+
+# 虚拟环境
+venv/
+env/
+.venv/
+.env/
+pyvenv.cfg
