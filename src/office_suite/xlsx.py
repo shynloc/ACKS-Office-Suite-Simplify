@@ -56,7 +56,7 @@ def create_excel(title: str, data: List[List[Any]], output_path: str, create_cha
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except Exception:
                 pass
         adjusted_width = (max_length + 2) * 1.2
         ws.column_dimensions[column].width = min(adjusted_width, 50)  # 最大宽度50
@@ -128,7 +128,7 @@ def from_dataframe(df: pd.DataFrame, output_path: str, **kwargs) -> Dict[str, An
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except Exception:
                 pass
         ws.column_dimensions[column].width = max_length + 2
     

@@ -1,6 +1,6 @@
 
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, List, Dict, Any
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
@@ -72,7 +72,8 @@ def create_word(title: str, content: str, output_path: str, **kwargs) -> Dict[st
 
 def add_watermark(input_path: str, watermark_text: str, output_path: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
-    给Word文档添加水印
+    给Word文档添加水印（简化版：通过页眉添加灰色大字）
+    TODO: 实现真正的半透明斜体全页水印
     """
     if not output_path:
         output_path = input_path

@@ -85,7 +85,7 @@ def get_file_size(file_path: str, unit: str = "bytes") -> float:
     }
     
     unit = unit.lower()
-    return round(round(size_bytes / units.get(unit, 1), 2)
+    return round(size_bytes / units.get(unit, 1), 2)
 
 def ensure_dir(path: str) -> None:
     """

@@ -189,14 +189,12 @@ class OfficeSuite:
     def execute_workflow(self, workflow_config: Dict) -> Dict[str, Any]:
         """
         执行自动化工作流
+        TODO: workflow 模块尚未实现，将在后续版本中开发
         """
-        from . import workflow
-        try:
-            wf = workflow.WorkflowEngine(workflow_config)
-            result = wf.execute()
-            return {"success": True, **result}
-        except Exception as e:
-            return {"success": False, "error": f"执行工作流失败: {str(e)}"}
+        raise NotImplementedError(
+            "工作流引擎尚未实现，敬请期待。"
+            "如需自动化处理，请使用 batch_convert / batch_add_watermark 等批量方法。"
+        )
             
     def extract_data(self, input_path: str, **kwargs) -> Dict[str, Any]:
         """
