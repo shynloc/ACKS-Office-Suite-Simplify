@@ -16,10 +16,10 @@ setup(
     description="ACKS Office Suite Simplify —— 全能 Python 办公自动化工具包，内置 ACKS 设计规范，单个 API 搞定 Word/Excel/PDF/PPT 四种格式，中文友好，适配 Hermes / DSH / MCP 等 AI Agent。",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/shynloc/Hermes-Easy-Office-Suite",
+    url="https://github.com/shynloc/ACKS-Office-Suite-Simplify",
     project_urls={
-        "Bug Tracker": "https://github.com/shynloc/Hermes-Easy-Office-Suite/issues",
-        "Source": "https://github.com/shynloc/Hermes-Easy-Office-Suite",
+        "Bug Tracker": "https://github.com/shynloc/ACKS-Office-Suite-Simplify/issues",
+        "Source": "https://github.com/shynloc/ACKS-Office-Suite-Simplify",
     },
     classifiers=[
         "Programming Language :: Python :: 3",

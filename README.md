@@ -67,8 +67,8 @@ pip install Jinja2 click rich python-magic chardet tqdm python-dotenv
 或直接从源码安装：
 
 ```bash
-git clone https://github.com/shynloc/Hermes-Easy-Office-Suite.git
-cd Hermes-Easy-Office-Suite
+git clone https://github.com/shynloc/ACKS-Office-Suite-Simplify.git
+cd ACKS-Office-Suite-Simplify
 pip install -r requirements.txt
 pip install -e .
 ```

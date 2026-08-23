@@ -14,8 +14,8 @@
 ## 🔧 安装步骤
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/shynloc/Hermes-Easy-Office-Suite.git
-cd Hermes-Easy-Office-Suite
+git clone https://github.com/shynloc/ACKS-Office-Suite-Simplify.git
+cd ACKS-Office-Suite-Simplify
 ```
 
 ### 2. 安装Python依赖
