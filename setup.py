@@ -35,6 +35,9 @@ setup(
     ],
     package_dir={"": "src"},
     packages=find_packages(where="src"),
+    package_data={
+        "office_suite.design_system": ["tokens.json", "assets/*.png"],
+    },
     python_requires=">=3.9",
     install_requires=requirements,
     extras_require={
@@ -55,7 +58,7 @@ setup(
     keywords=[
         "office", "excel", "word", "powerpoint", "pdf", 
         "docx", "xlsx", "pptx", "办公自动化", "automation",
-        "report-generator", "hermes", "ai-agent"
+        "report-generator", "hermes", "ai-agent", "design-system"
     ],
     include_package_data=True,
 )

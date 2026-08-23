@@ -7,15 +7,52 @@ from openpyxl.chart import BarChart, Reference
 from openpyxl.utils import get_column_letter
 import pandas as pd
 
-def create_excel(title: str, data: List[List[Any]], output_path: str, create_chart: bool = False, **kwargs) -> Dict[str, Any]:
+def create_excel(title: str, data: List[List[Any]], output_path: str,
+                 create_chart: bool = False,
+                 theme: str = "acks", **kwargs) -> Dict[str, Any]:
     """
-    创建Excel表格
+    创建 Excel 表格。
+
     Args:
         title: 表格标题
         data: 二维数组数据，第一行为表头
         output_path: 输出路径
         create_chart: 是否生成柱状图
+        theme: "acks"（符合 ACKS 设计规范，默认）或 "default"（简单样式）
     """
+    if theme == "acks":
+        return _create_excel_acks(title, data, output_path, create_chart, **kwargs)
+    return _create_excel_default(title, data, output_path, create_chart, **kwargs)
+
+
+def _create_excel_acks(title: str, data: List[List[Any]], output_path: str,
+                       create_chart: bool, **kwargs) -> Dict[str, Any]:
+    """用 ACKS 设计规范（design_system.xlsx）生成 Excel。"""
+    from .design_system import xlsx as acks
+
+    wb = openpyxl.Workbook()
+    acks.register_named_styles(wb)
+    ws = wb.active
+    ws.title = title[:30]
+
+    headers = list(data[0]) if data else []
+    rows = [tuple(r) for r in data[1:]] if len(data) > 1 else []
+    acks.build_data_sheet(ws, headers=headers, rows=rows)
+
+    wb.save(output_path)
+
+    return {
+        "output_path": output_path,
+        "file_size": os.path.getsize(output_path),
+        "rows": len(data),
+        "columns": len(data[0]) if data else 0,
+        "theme": "acks",
+    }
+
+
+def _create_excel_default(title: str, data: List[List[Any]], output_path: str,
+                          create_chart: bool, **kwargs) -> Dict[str, Any]:
+    """原简单样式（蓝色表头 + 柱状图）。"""
     # 创建工作簿和工作表
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -86,7 +123,8 @@ def create_excel(title: str, data: List[List[Any]], output_path: str, create_cha
         "output_path": output_path,
         "file_size": os.path.getsize(output_path),
         "rows": len(data),
-        "columns": len(data[0]) if data else 0
+        "columns": len(data[0]) if data else 0,
+        "theme": "default",
     }
 
 def extract_data(input_path: str, sheet_name: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:

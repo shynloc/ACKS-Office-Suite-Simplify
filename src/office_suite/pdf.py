@@ -84,26 +84,71 @@ def create_pdf(title: str, content: str, output_path: str, **kwargs) -> Dict[str
         "pages": len(story) // 20 + 1  # 估算页数
     }
 
-def add_watermark(input_path: str, watermark_text: str, output_path: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+def add_watermark(input_path: str, watermark_text: str, output_path: Optional[str] = None,
+                  opacity: float = 0.15, position: str = "diagonal", **kwargs) -> Dict[str, Any]:
     """
-    给PDF添加水印
-    注：完整的水印功能需要使用reportlab生成水印页面然后合并，这里是简化版本
+    给 PDF 添加水印（半透明斜体，reportlab 生成水印页 + merge_page 合并）。
+
+    Args:
+        input_path: 输入文件路径
+        watermark_text: 水印文本（支持中文）
+        output_path: 输出文件路径（默认覆盖输入）
+        opacity: 透明度 0~1，默认 0.15
+        position: 水印位置 "diagonal"（45° 斜排）或 "center"
     """
     if not output_path:
         output_path = input_path
-        
-    # TODO: 实现完整水印功能
-    # 临时方案：直接复制文件
+
     reader = PdfReader(input_path)
     writer = PdfWriter()
-    
+
+    watermark_stream = _build_watermark_page(watermark_text, opacity, position)
+    watermark_reader = PdfReader(watermark_stream)
+    watermark_page = watermark_reader.pages[0]
+
     for page in reader.pages:
+        page.merge_page(watermark_page)
         writer.add_page(page)
-        
+
     with open(output_path, 'wb') as f:
         writer.write(f)
-        
-    return {"output_path": output_path}
+
+    return {"output_path": output_path, "watermarked_pages": len(writer.pages)}
+
+
+def _build_watermark_page(text: str, opacity: float, position: str):
+    """用 reportlab 生成单页 A4 水印 PDF，返回 BytesIO。"""
+    from io import BytesIO
+    from reportlab.pdfgen import canvas
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4
+
+    c.setFillColorRGB(0.5, 0.5, 0.5)
+    c.setFillAlpha(max(0.0, min(1.0, opacity)))
+
+    font_size = 60
+    # 含中文用 CID 宋体，否则用 Helvetica
+    if any('\u4e00' <= ch <= '\u9fff' for ch in text):
+        pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
+        c.setFont('STSong-Light', font_size)
+    else:
+        c.setFont('Helvetica-Bold', font_size)
+
+    c.saveState()
+    c.translate(w / 2, h / 2)
+    if position == "diagonal":
+        c.rotate(45)
+    c.drawCentredString(0, 0, text)
+    c.restoreState()
+
+    c.showPage()
+    c.save()
+    buf.seek(0)
+    return buf
 
 def extract_text(input_path: str, **kwargs) -> str:
     """

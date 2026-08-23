@@ -18,6 +18,7 @@
 | 🛡️ 安全可靠 | 所有处理本地完成，无数据上传泄露风险 |
 | 🇨🇳 中文友好 | 彻底解决中文乱码问题，全中文文档 |
 | 🤖 AI集成 | 原生支持作为Hermes AI技能调用，适配AI工作流 |
+| 🎨 设计规范 | 内置 ACKS Studio 设计规范主题，产出规范化文档 |
 
 ---
 
@@ -35,18 +36,35 @@ pip install Jinja2 click rich
 ```python
 from office_suite import OfficeSuite
 
-# 初始化套件
-suite = OfficeSuite()
+# 初始化套件（theme="acks" 为 ACKS 设计规范主题，默认；"default" 为简单样式）
+suite = OfficeSuite(theme="acks")
 
-# 创建Word报告
+# 创建符合规范的 Word 报告
 suite.create("word", 
          title="2025年第一季度销售报告", 
          content="报告内容...",
-         output="季度报告.docx")
+         output_path="季度报告.docx")
 
 # 一键转换为PDF
-suite.convert("季度报告.docx", to="pdf", output="季度报告.pdf")
+suite.convert("季度报告.docx", to="pdf", output_path="季度报告.pdf")
 ```
+
+### 3. 设计规范主题
+内置 **ACKS Studio 文档设计规范 v2**（集成自共享知识库），使产出的 Word/PPT/Excel 文档符合统一规范：
+- **橙色 `#FF6B1A` 唯一强调色**，黑色实线分隔，中英双语并置
+- 封面 / 章节标题 / 正文 / 列表 / 表格 / KPI / 引用 等组件开箱即用
+- 品牌可配置：`brand_name` 参数默认 `ACKS Studio`，传 `""` 去品牌化
+
+```python
+# 全局默认主题
+suite = OfficeSuite(theme="acks")
+
+# 或单次覆盖
+suite.create("word", title="报告", content="...", output_path="a.docx", theme="default")
+suite.create("word", title="报告", content="...", output_path="b.docx", brand_name="")  # 去品牌化
+```
+
+> 设计规范源码位于 `src/office_suite/design_system/`，来源与同步说明见该目录 `SOURCE.md`。
 
 ### 3. 发送邮件
 ```python
