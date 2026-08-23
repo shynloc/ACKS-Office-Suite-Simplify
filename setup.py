@@ -9,11 +9,11 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
     requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 setup(
-    name="hermes-easy-office-suite",
+    name="acks-office-suite-simplify",
     version=__version__,
     author=__author__,
     author_email="mail@jintao.uk",
-    description="全能Python办公自动化工具包，单个API搞定Word/Excel/PDF/PPT四种格式，中文友好，支持与Hermes AI智能体无缝集成。",
+    description="ACKS Office Suite Simplify —— 全能 Python 办公自动化工具包，内置 ACKS 设计规范，单个 API 搞定 Word/Excel/PDF/PPT 四种格式，中文友好，适配 Hermes / DSH / MCP 等 AI Agent。",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/shynloc/Hermes-Easy-Office-Suite",
@@ -56,9 +56,10 @@ setup(
         ],
     },
     keywords=[
-        "office", "excel", "word", "powerpoint", "pdf", 
+        "office", "excel", "word", "powerpoint", "pdf",
         "docx", "xlsx", "pptx", "办公自动化", "automation",
-        "report-generator", "hermes", "ai-agent", "design-system"
+        "report-generator", "hermes", "ai-agent", "design-system",
+        "acks", "mcp", "dsh", "deepseek", "office-suite", "document-generation"
     ],
     include_package_data=True,
 )
