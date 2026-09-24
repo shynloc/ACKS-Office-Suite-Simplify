@@ -34,6 +34,8 @@
 - 三个代码生成模块的 constants import 由绝对 import 改为**相对 import**
   （`from tokens_constants import *` → `from .tokens_constants import *`），
   以适配 Python 包结构 `office_suite.design_system`。
+- `tests/` 相应改为经由包路径导入（`from tokens import ...` → `from office_suite.design_system.tokens import ...`），
+  `tests/conftest.py` 改为把 `src/` 加入 `sys.path`。
 
 ## 同步策略
 
