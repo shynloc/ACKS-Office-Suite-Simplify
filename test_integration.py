@@ -57,12 +57,19 @@ def main():
     r = suite.extract_data(word_path)
     check("extract text (docx)", r.get("success") and isinstance(r.get("data"), str))
 
-    # 7. PDF 水印
+    # 7. 提取数据（Excel，默认读取第一个工作表）
+    r = suite.extract_data(excel_path)
+    check("extract data (xlsx)", r.get("success") and r.get("data") == [
+        {"部门": "一部", "1月": 150, "2月": 140},
+        {"部门": "二部", "1月": 120, "2月": 130},
+    ])
+
+    # 8. PDF 水印
     wm_path = os.path.join(tmp, "report_wm.pdf")
     r = suite.add_watermark(pdf_path, "机密文件", output_path=wm_path)
     check("pdf watermark", r.get("success") and os.path.exists(wm_path))
 
-    # 8. 合并 PDF
+    # 9. 合并 PDF
     merged_path = os.path.join(tmp, "merged.pdf")
     from office_suite.pdf import merge_pdfs
     r = merge_pdfs([pdf_path, wm_path], merged_path)

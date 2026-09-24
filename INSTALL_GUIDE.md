@@ -21,7 +21,7 @@ cd ACKS-Office-Suite-Simplify
 ### 2. 安装Python依赖
 ```bash
 # 核心依赖（必须安装）
-pip install python-docx openpyxl reportlab PyPDF2 python-pptx pandas Pillow
+pip install python-docx openpyxl reportlab PyPDF2 python-pptx pandas xlrd Pillow
 
 # 完整功能依赖（可选，推荐安装）
 pip install Jinja2 click rich python-magic chardet tqdm
