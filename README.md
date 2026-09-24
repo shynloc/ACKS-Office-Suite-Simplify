@@ -58,7 +58,7 @@
 
 ```bash
 # 核心依赖（必装）
-pip install python-docx openpyxl reportlab PyPDF2 python-pptx pandas Pillow
+pip install python-docx openpyxl reportlab PyPDF2 python-pptx pandas xlrd Pillow
 
 # 完整功能（可选）
 pip install Jinja2 click rich python-magic chardet tqdm python-dotenv
@@ -164,6 +164,16 @@ suite.send_email(to=["boss@example.com"], subject="季度报告", attachments=["
 # 密码从环境变量 OFFICE_EMAIL_PASSWORD 读取（见 .env.template）
 ```
 
+### 6. Excel 数据提取
+
+```python
+suite.extract_data("b.xlsx")                       # 默认读取第一个工作表 → {"success": True, "data": [{"部门": "一部", "1月": 150}]}
+suite.extract_data("b.xlsx", sheet_name="数据表")   # 指定工作表名，或从 0 开始的索引（如 sheet_name=1）
+suite.extract_data("b.xlsx", usecols=["部门"])      # 其余参数透传给 pandas.read_excel
+```
+
+> 按单元格原值读取（工号 `00123`、身份证号等文本型数字保持原样），结果可直接 `json.dumps`：空单元格为 `None`，日期/时间为 ISO 8601 字符串。支持 `.xlsx` 与 `.xls`。
+
 ---
 
 ## 🐳 部署
@@ -213,7 +223,7 @@ CMD ["python", "-m", "office_suite_mcp"]
 |------|------|
 | 语言 | Python 3.9+ |
 | Word | python-docx |
-| Excel | openpyxl · pandas |
+| Excel | openpyxl · pandas · xlrd（.xls） |
 | PDF | reportlab · PyPDF2 |
 | PPT | python-pptx |
 | 图像/字体度量 | Pillow |
