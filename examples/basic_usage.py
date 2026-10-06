@@ -4,7 +4,7 @@
 基础使用示例：创建不同类型的Office文档
 """
 
-from office_suite import OfficeSuite
+from acks_office import OfficeSuite
 import os
 
 def main():

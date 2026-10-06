@@ -8,8 +8,8 @@ import openpyxl
 import pandas as pd
 import pytest
 
-from office_suite import OfficeSuite
-from office_suite.xlsx import extract_data
+from acks_office import OfficeSuite
+from acks_office.xlsx import extract_data
 
 DATA = Path(__file__).resolve().parent / "data"
 FIRST = [{"name": "A", "value": 1}, {"name": "B", "value": 2}]

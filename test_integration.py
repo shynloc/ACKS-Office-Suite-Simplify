@@ -10,17 +10,18 @@ import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from office_suite import OfficeSuite  # noqa: E402
+from acks_office import OfficeSuite  # noqa: E402
 
 
 def main():
     suite = OfficeSuite(theme="acks")
-    tmp = tempfile.mkdtemp(prefix="office_suite_test_")
+    tmp = tempfile.mkdtemp(prefix="acks_office_test_")
     results = []
 
     def check(name, cond):
         results.append((name, cond))
-        print(f"{'✅' if cond else '❌'} {name}")
+        # Windows CI 的重定向标准输出可能是 CP1252，测试日志使用 ASCII。
+        print(f"{'[PASS]' if cond else '[FAIL]'} {name}")
 
     # 1. Word（ACKS 主题）
     word_path = os.path.join(tmp, "report.docx")
@@ -71,7 +72,7 @@ def main():
 
     # 9. 合并 PDF
     merged_path = os.path.join(tmp, "merged.pdf")
-    from office_suite.pdf import merge_pdfs
+    from acks_office.pdf import merge_pdfs
     r = merge_pdfs([pdf_path, wm_path], merged_path)
     check("merge pdfs", os.path.exists(merged_path))
 
@@ -79,11 +80,11 @@ def main():
     passed = sum(1 for _, ok in results if ok)
     total = len(results)
     print(f"\n{'='*40}")
-    print(f"通过 {passed}/{total} 项测试")
+    print(f"Passed {passed}/{total} integration checks")
     if passed == total:
-        print("✅ 所有功能测试通过")
+        print("All integration checks passed")
     else:
-        print("❌ 存在失败项")
+        print("Integration checks failed")
         sys.exit(1)
 
 

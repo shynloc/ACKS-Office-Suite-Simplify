@@ -48,3 +48,6 @@ env/
 .venv/
 .env/
 pyvenv.cfg
+
+# 技能打包时生成的程序代码副本
+skills/acks-office/lib/

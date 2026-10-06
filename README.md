@@ -1,277 +1,171 @@
-# 🎨 ACKS Office Suite Simplify
+# ACKS Office Suite Simplify
 
-> 全能 Python 办公自动化工具包 —— 单个 API 搞定 Word / Excel / PDF / PPT，内置 ACKS 设计规范，开箱即出规范化文档。
+> 让 AI Agent 和 Python 程序在任何电脑上产出排版规范的 Word / Excel / PPT / PDF——**不需要安装 Office**。
 
 <p align="center">
-  <a href="#"><img alt="Python" src="https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white"></a>
-  <a href="#"><img alt="Language" src="https://img.shields.io/badge/中文-友好-red"></a>
-  <a href="#"><img alt="Platform" src="https://img.shields.io/badge/平台-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey"></a>
-  <a href="#"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
-  <a href="#"><img alt="Agent" src="https://img.shields.io/badge/Agent-Hermes%20%7C%20DSH%20%7C%20MCP-orange"></a>
-  <a href="#"><img alt="Design" src="https://img.shields.io/badge/设计规范-ACKS%20v2.1-FF6B1A"></a>
+  <a href="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml/badge.svg"></a>
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white">
+  <img alt="Platform" src="https://img.shields.io/badge/平台-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
 </p>
 
----
+文件全部由 Python 直接写出，用户电脑上有没有 Microsoft Office、WPS 都不影响出品；LibreOffice 只在需要
+格式转换时才用到。内置的 ACKS 主题是一套完整的文档设计规范参照，也可以一键去掉品牌、换成你自己的品牌。
 
-## ✨ 特性
+由 **ACKS Studio** 出品。包名 `acks-office`，导入名 `acks_office`。
 
-| 能力 | 说明 |
-|------|------|
-| 📄 Word | 创建、编辑、合并、水印、模板、格式转换 |
-| 📊 Excel | 创建、数据分析、图表生成、数据导入导出、批量处理 |
-| 📑 PDF | 生成、合并、拆分、内容提取、**真水印**、格式转换 |
-| 🎨 PowerPoint | 演示文稿创建、设计、动画、模板、批量生成 |
-| 🔄 格式互转 | 4 种 Office 格式一键互转（走 LibreOffice） |
-| 📦 批量处理 | 整目录文件批量转换、批量水印 |
-| ⚙️ 工作流 | YAML 配置自动化工作流，日常报告自动生成 |
-| 📧 邮件集成 | 生成的文档自动发送到指定邮箱 |
-| 🎨 设计规范 | 内置 ACKS Studio 设计规范 v2.1，产出规范化文档 |
-| 🎭 双主题 | `theme="acks"`（规范）与 `theme="default"`（简洁）一键切换 |
-| 🇨🇳 中文友好 | 彻底解决中文乱码，全中文文档 |
-| 🤖 AI 集成 | 原生适配 Hermes Agent / DSH / MCP，可作 AI 工作流工具 |
+## 能做什么
 
----
+| 格式 | 生成 | 读取 | 其他 |
+|---|---|---|---|
+| Word | Markdown 正文 → 规范排版（标题、列表、任务清单、表格、提示块、代码、图片、链接） | 正文与表格文字 | 合并、水印 |
+| PDF | 同上，自动嵌入中文字体 | 文字 | 合并、拆分、水印 |
+| PPT | 封面页、内容页，品牌与页脚可配置 | 每页文字 | 切换效果 |
+| Excel | 表头、斑马纹、数字格式（`default` 主题可附柱状图） | 每行一个对象（保留文本型编号，日期为 ISO 字符串） | — |
+| 转换 | docx / xlsx / pptx / pdf 等互转（需要 LibreOffice） | | |
 
-## 🎯 设计规范（ACKS Studio v2.1）
+## 三种用法
 
-内置 [ACKS Studio 文档设计规范 v2](src/office_suite/design_system/README.md)，使产出的 Word / PPT / Excel 文档统一规范：
+### 1. 作为 Agent 技能（Skill）
 
-- **橙色 `#FF6B1A` 是唯一强调色**（覆盖 ≤ 5%），`#D4530E` 用于正文链接（WCAG AA）
-- **黑色实线主分隔**：章节边界 2pt，段落组 1pt，不用阴影渐变
-- **中英双语并置**：中文行高 1.75 / 英文 1.6，Space Grotesk / DM Sans / Noto Sans SC 字体体系
-- **组件开箱即用**：封面、章节标题、正文、列表、表格、KPI、引用、callout、代码块
-- **Token 单一信源**：`tokens.json` → 自动生成三套常量，`scripts/validate.py` 校验一致性
+适用于 Claude Code、Codex、OpenClaw、WorkBuddy、Hermes 等支持 [Agent Skills](https://agentskills.io) 的 Agent。
 
-> 设计规范源码位于 `src/office_suite/design_system/`，来源与同步说明见 `SOURCE.md`。
+1. 从 [Releases](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases) 下载
+   `acks-office-skill-<版本>.zip`（已包含程序代码）；
+2. 解压到 Agent 的技能目录，得到 `<技能目录>/acks-office/SKILL.md`。常见位置：
 
----
+   | Agent | 技能目录（以各 Agent 文档为准） |
+   |---|---|
+   | Claude Code | `~/.claude/skills/` |
+   | Codex | `~/.codex/skills/` |
+   | OpenClaw | `~/.openclaw/skills/` 或工作区的 `skills/` |
+   | WorkBuddy | `~/.workbuddy/skills/` |
+   | Hermes | `~/.hermes/skills/` |
 
-## 📦 安装
+3. 在 Agent 里直接说「帮我写一份季度报告，导出 Word 和 PDF」即可。
 
-### 环境要求
+第一次使用时，Agent 会运行 `doctor` 检查环境：识别自己所在的 Agent、检查 Python 与依赖、PDF 中文字体、
+LibreOffice 及本机其他 Office 程序，给出能力等级和补齐计划。**任何安装都会先征得你的同意**；依赖装在
+专用虚拟环境里，不会改动系统 Python。
 
-- **Python** ≥ 3.9
-- **系统**：Windows 10+ / macOS 10.15+ / Linux（Ubuntu 20.04+ / CentOS 7+ / OpenCloudOS 9+）
-- **可选**：LibreOffice（高质量格式转换）、中文字体（Noto Sans SC 等）
-
-### pip 安装
+### 2. 命令行
 
 ```bash
-# 核心依赖（必装）
-pip install python-docx openpyxl reportlab PyPDF2 python-pptx pandas xlrd Pillow
+pip install "acks-office @ https://github.com/shynloc/ACKS-Office-Suite-Simplify/archive/refs/tags/v2.1.0.zip"
 
-# 完整功能（可选）
-pip install Jinja2 click rich python-magic chardet tqdm python-dotenv
+acks-office doctor                                   # 检查环境
+acks-office create word -o 报告.docx --title "2026 Q3 经营回顾" --content-file 正文.md
+acks-office create pdf  -o 报告.pdf  --title "2026 Q3 经营回顾" --content-file 正文.md
+acks-office create pptx -o 汇报.pptx --slides-file slides.json --brand-name "栖木咖啡"
+acks-office create excel -o 数据.xlsx --data-file data.csv
+acks-office extract 报告.docx
+acks-office convert 报告.docx --to pdf                # 需要 LibreOffice
+acks-office watermark 报告.pdf --text "内部资料"
+acks-office merge a.pdf b.pdf -o 合并.pdf
+acks-office fonts install noto-sans-sc               # 下载开源中文字体（PDF 嵌入用）
 ```
 
-或直接从源码安装：
+每个命令都可以加 `--json`，输出统一结构 `{"ok", "data", "artifacts", "warnings", "error"}`，
+退出码 0 成功、1 失败、2 参数错误；已有文件默认不覆盖（加 `--overwrite`）。完整说明见
+[命令参考](skills/acks-office/references/commands.md)。
+
+### 3. Python 库
+
+```python
+from acks_office import OfficeSuite
+
+suite = OfficeSuite()  # 默认 theme="acks"
+
+suite.create("word", title="2026 Q3 经营回顾", subtitle="营收、门店与会员",
+             content="# 经营概览\n\n营收 **1.28 亿元**，同比增长 24%。\n\n"
+                     "| 区域 | 营收（万元） |\n|---|--:|\n| 华东 | 5,888 |",
+             output_path="报告.docx", brand_name="")          # brand_name="" 去掉品牌
+
+suite.create("pdf", title="2026 Q3 经营回顾", content="…", output_path="报告.pdf")
+suite.create("pptx", title="经营回顾", output_path="汇报.pptx", brand_name="栖木咖啡",
+             slides=[{"title": "经营回顾", "subtitle": "2026 Q3", "layout": "title"},
+                     {"title": "核心结论", "content": "营收增长 24%\n会员 12 万"}])
+suite.create("excel", title="销售", data=[["部门", "1月"], ["一部", 150]], output_path="数据.xlsx")
+
+suite.extract_data("数据.xlsx")       # {"success": True, "data": [{"部门": "一部", "1月": 150}]}
+suite.convert("报告.docx", to="pdf")  # 需要 LibreOffice
+```
+
+所有方法返回字典：成功时 `success` 为 True，并带输出路径等信息；失败时为 False 并附 `error`。
+
+## 主题与品牌
+
+| 需求 | 做法 |
+|---|---|
+| 设计规范排版（默认） | `theme="acks"`：配色、字体、版式全部来自 `design_system/tokens.json` |
+| 朴素排版、便于他人二次编辑 | `theme="default"`：Word 内置样式 |
+| 去掉品牌 | `brand_name=""`：封面、页眉、页脚不出现任何品牌字样 |
+| 换成你的品牌 | `brand_name="品牌名"`，页脚文字可用 `footer_label` 指定 |
+
+3.0 将提供主题引擎：用一份主题文件描述你自己的设计规范，附带偏商务（Slate）与偏杂志（Folio）两套示例主题，
+并能由 Agent 引导你逐项创建。样张定稿的字体、配色与提示块样式见
+[设计参考](skills/acks-office/references/design-system.md#slate--folio-样张定稿)。
+
+## 字体
+
+- **PDF**：自动选择可嵌入的中文字体——参数 `font` → 环境变量 `ACKS_OFFICE_PDF_FONT` →
+  `fonts install` 下载的 Noto Sans SC → 系统自带（macOS 华文黑体、Windows 微软雅黑、Linux 文泉驿等）。
+  都没有时回退到不嵌入的 STSong-Light，并在结果里给出 `FONT_FALLBACK` 提醒。
+- **Word / PPT**：使用主题声明的字体名，打开文档的电脑缺字体时会被替换显示。`doctor` 会列出缺少的主题字体
+  及下载地址（均为可免费商用的开源字体）。
+
+## LibreOffice（可选）
+
+只有 `convert`（以及基于它的批量转换）需要。查找顺序：环境变量 `ACKS_OFFICE_SOFFICE` → PATH →
+各系统标准安装位置（如 macOS 的 `/Applications/LibreOffice.app`）。安装：
+
+```bash
+brew install --cask libreoffice                                # macOS
+winget install -e --id TheDocumentFoundation.LibreOffice       # Windows
+sudo apt-get install -y libreoffice                            # Ubuntu / Debian
+```
+
+## 从 2.0 升级
+
+- 导入名改为 `acks_office`；`import office_suite` 仍可用（会提示弃用），3.0 移除。
+- 段落内的单个换行保留为换行；封面标题不再重复；页脚、合并、PDF 字体等行为有调整，
+  详见 [CHANGELOG](CHANGELOG.md)。
+
+## 目录结构
+
+```
+src/acks_office/
+├── core.py              OfficeSuite：统一入口、批量处理、工作流、邮件
+├── cli.py · doctor.py   命令行与环境检查
+├── docx.py · pdf.py · pptx.py · xlsx.py
+├── markdown_blocks.py   Markdown 解析（Word 与 PDF 共用）
+├── fonts.py · utils.py  字体选择与下载、LibreOffice 查找与转换
+└── design_system/       ACKS 设计规范（tokens.json 为唯一信源，来源见 SOURCE.md）
+skills/acks-office/      Agent 技能：SKILL.md、入口脚本、参考文档
+tools/build_skill_bundle.py   生成技能压缩包
+```
+
+## 开发
 
 ```bash
 git clone https://github.com/shynloc/ACKS-Office-Suite-Simplify.git
 cd ACKS-Office-Suite-Simplify
-pip install -r requirements.txt
-pip install -e .
+python -m pip install -e ".[dev]"
+python -m pytest                    # 单元测试
+python test_integration.py          # 集成测试
+python tools/build_skill_bundle.py  # 生成 dist/acks-office-skill-<版本>.zip
 ```
 
-### 系统工具（高质量转 PDF）
+## 安全
 
-```bash
-# Ubuntu / Debian
-sudo apt install -y libreoffice fonts-noto-cjk
+文档全部在本机处理，不收集任何使用数据。联网只发生在：`doctor` 的连通性检查（可用 `--no-network` 关闭）、
+`fonts install` 下载字体（固定版本并校验 SHA-256）、`send_email` 连接你的邮件服务器（校验证书、
+拒绝明文登录），以及工作流里你自己配置的 API 数据源。
+详见 [SECURITY.md](SECURITY.md)。
 
-# macOS
-brew install libreoffice
+## 许可证
 
-# Windows：下载安装 LibreOffice 与中文字体
-```
-
----
-
-## 🚀 快速开始
-
-```python
-from office_suite import OfficeSuite
-
-# 初始化（theme="acks" 默认，产出符合 ACKS 设计规范的文档）
-suite = OfficeSuite(theme="acks")
-
-# 3 行代码生成规范化 Word 报告
-suite.create("word",
-         title="2025年第一季度销售报告",
-         content="# 销售情况概述\n\n总销售额 1200 万元，同比增长 25%。\n\n- 销售一部：450 万元\n- 销售二部：380 万元",
-         output_path="季度报告.docx")
-
-# 一键转 PDF
-suite.convert("季度报告.docx", to="pdf", output_path="季度报告.pdf")
-```
-
----
-
-## 📚 使用指南
-
-### 1. 创建文档
-
-```python
-suite = OfficeSuite(theme="acks")   # 默认设计规范主题
-
-# Word（支持 Markdown 标题/列表）
-suite.create("word", title="标题", content="...", output_path="a.docx")
-
-# Excel（第一行为表头，可选柱状图）
-suite.create("excel", title="数据表", data=[["部门","1月"],["一部",150]], create_chart=True, output_path="b.xlsx")
-
-# PDF
-suite.create("pdf", title="标题", content="...", output_path="c.pdf")
-
-# PPT（slides 列表，支持 title/content 布局）
-suite.create("pptx", title="演示", slides=[{"title":"封面","layout":"title"},{"title":"内容","content":"• 要点一","layout":"content"}], output_path="d.pptx")
-```
-
-### 2. 主题切换与去品牌化
-
-```python
-# 单次覆盖主题
-suite.create("word", ..., theme="default")   # 简洁样式
-
-# 去品牌化（brand_name="" 去掉 ACKS 品牌 stamp）
-suite.create("word", ..., brand_name="")
-suite.create("word", ..., brand_name="我的品牌")   # 换品牌
-```
-
-### 3. 格式转换 / 批量 / 水印
-
-```python
-suite.convert("a.docx", to="pdf")                                    # 单文件转换
-suite.batch_convert("word_docs", "pdf_docs", "docx", "pdf")          # 批量转换
-suite.add_watermark("c.pdf", "机密文件", output_path="c_wm.pdf")     # PDF 真水印
-suite.batch_add_watermark("pdf_docs", "wm_docs", "内部资料")         # 批量水印
-```
-
-### 4. 自动化工作流
-
-```python
-import yaml
-with open("examples/workflow_example.yaml") as f:
-    cfg = yaml.safe_load(f)
-suite.execute_workflow(cfg)   # 数据提取 → 生成 → 转换 → 水印 → 邮件
-```
-
-### 5. 邮件集成
-
-```python
-suite.config_email(smtp_server="smtp.qq.com", smtp_port=465, username="you@email.com")
-suite.send_email(to=["boss@example.com"], subject="季度报告", attachments=["季度报告.pdf"])
-# 密码从环境变量 OFFICE_EMAIL_PASSWORD 读取（见 .env.template）
-```
-
-### 6. Excel 数据提取
-
-```python
-suite.extract_data("b.xlsx")                       # 默认读取第一个工作表 → {"success": True, "data": [{"部门": "一部", "1月": 150}]}
-suite.extract_data("b.xlsx", sheet_name="数据表")   # 指定工作表名，或从 0 开始的索引（如 sheet_name=1）
-suite.extract_data("b.xlsx", usecols=["部门"])      # 其余参数透传给 pandas.read_excel
-```
-
-> 按单元格原值读取（工号 `00123`、身份证号等文本型数字保持原样），结果可直接 `json.dumps`：空单元格为 `None`，日期/时间为 ISO 8601 字符串。支持 `.xlsx` 与 `.xls`。
-
----
-
-## 🐳 部署
-
-### 作为 AI Agent 工具（MCP 方式，推荐）
-
-将本库包装为 MCP server，供 Hermes / DSH / Claude Code / Codex 等任意支持 MCP 的 Agent 调用：
-
-```yaml
-# DSH cordis.patch.yml 接入示例
-- id: mcp-office
-  name: '@deepseek-ai/dsh-mcp-client'
-  config:
-    serverName: office
-    transport: streamable-http
-    url: https://your-server/mcp
-    headers:
-      Authorization: 'Bearer ${OFFICE_MCP_TOKEN}'
-```
-
-> 工具将呈现为 `mcp__office__create_document`、`mcp__office__convert_document` 等原生工具。
-
-### 本地 / 敏感场景（stdio 方式）
-
-```bash
-# 文档不出本机
-uvx acks-office-suite-mcp   # 或 python -m office_suite_mcp
-```
-
-### Docker 部署（含 LibreOffice + 中文字体）
-
-```dockerfile
-FROM python:3.11-slim
-RUN apt-get update && apt-get install -y libreoffice fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . /app
-WORKDIR /app
-CMD ["python", "-m", "office_suite_mcp"]
-```
-
----
-
-## 🏷️ 技术栈
-
-| 类别 | 技术 |
-|------|------|
-| 语言 | Python 3.9+ |
-| Word | python-docx |
-| Excel | openpyxl · pandas · xlrd（.xls） |
-| PDF | reportlab · PyPDF2 |
-| PPT | python-pptx |
-| 图像/字体度量 | Pillow |
-| 转档 | LibreOffice（headless） |
-| 工作流 | YAML 配置 |
-
----
-
-## 🤝 适配平台与 Agent
-
-| 形态 | 适配 |
-|------|------|
-| **Python 库** | 直接 `pip install`，任意 Python 项目可调用 |
-| **AI Agent** | Hermes Agent、DeepSeek Harness (DSH)、Claude Code、Codex、任意 MCP 客户端 |
-| **操作系统** | Windows / macOS / Linux |
-| **协议** | MCP（stdio / streamable-http）、CLI、Python API |
-
----
-
-## 📁 目录结构
-
-```
-src/office_suite/
-├── core.py            # OfficeSuite 统一门面（theme/工作流/邮件）
-├── docx.py / xlsx.py / pdf.py / pptx.py   # 四格式处理
-├── email.py / utils.py                    # 邮件 / 工具
-└── design_system/     # ★ ACKS 设计规范 v2.1（tokens.json 单一信源）
-```
-
----
-
-## 🛡️ 安全说明
-
-1. **所有文档处理本地完成**，不上传任何数据到第三方服务器
-2. **密码/授权码切勿硬编码**，使用环境变量（见 `.env.template`）
-3. 配置文件权限建议 `600`
-
----
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 PR，有功能建议或 Bug 反馈欢迎提出～
-
----
-
-## 📄 许可证
-
-MIT License | 详见 [LICENSE](LICENSE)
+[MIT](LICENSE)
 
 ---
 

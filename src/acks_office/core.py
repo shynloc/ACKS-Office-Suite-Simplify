@@ -63,7 +63,6 @@ class OfficeSuite:
                 output_path = os.path.join(input_dir, f"{input_name}.{to.lower()}")
             
             # 调用对应转换方法
-            input_ext = os.path.splitext(input_path)[1].lower().lstrip('.')
             target_ext = to.lower()
             
             # 基于libreoffice的通用转换（需要安装libreoffice）
@@ -174,14 +173,22 @@ class OfficeSuite:
         """
         if not self.email_config:
             return {"success": False, "error": "请先调用config_email配置邮箱参数"}
-            
+
+        config = dict(self.email_config)
+        if not config.get("password"):
+            config["password"] = (os.environ.get("OFFICE_EMAIL_PASSWORD")
+                                  or os.environ.get("ACKS_OFFICE_EMAIL_PASSWORD"))
+        if not config["password"]:
+            return {"success": False,
+                    "error": "缺少邮箱密码/授权码：请在 config_email 传入 password，或设置环境变量 OFFICE_EMAIL_PASSWORD"}
+
         try:
             result = email.send_email(
                 to=to,
                 subject=subject,
                 body=body,
                 attachments=attachments,
-                **self.email_config,
+                **config,
                 **kwargs
             )
             return {"success": True, **result}
@@ -339,7 +346,8 @@ class OfficeSuite:
     
     def extract_data(self, input_path: str, **kwargs) -> Dict[str, Any]:
         """
-        提取文档中的数据
+        提取文档中的数据：Excel 返回行字典列表；Word、PDF 返回文本（表格按行输出）；
+        PPT 返回 {幻灯片序号: 文本}
         """
         if not os.path.exists(input_path):
             return {"success": False, "error": f"输入文件不存在: {input_path}"}
@@ -352,6 +360,8 @@ class OfficeSuite:
                 data = docx.extract_text(input_path, **kwargs)
             elif ext == ".pdf":
                 data = pdf.extract_text(input_path, **kwargs)
+            elif ext == ".pptx":
+                data = pptx.extract_text(input_path, **kwargs)
             else:
                 return {"success": False, "error": f"不支持该格式的数据提取: {ext}"}
                 

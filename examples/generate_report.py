@@ -4,7 +4,7 @@
 """
 
 import os
-from office_suite import OfficeSuite
+from acks_office import OfficeSuite
 
 
 def main():
