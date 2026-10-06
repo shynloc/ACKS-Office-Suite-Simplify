@@ -235,12 +235,14 @@ def test_cli_records_sheets_and_legacy_limits(tmp_path, capsys, monkeypatch):
     assert json.loads(capsys.readouterr().out)["error"]["code"] == "INVALID_INPUT"
 
 
-def test_legacy_excel_themes_unchanged(tmp_path):
-    for theme in ("acks", "default"):
-        out = tmp_path / f"{theme}.xlsx"
-        result = create_excel("销售", DATA, str(out), theme=theme)
-        assert result["theme"] == theme and result["rows"] == len(DATA)
-        assert _sheet(out)["A1"].value == "区域"
+def test_acks_excel_unchanged_and_default_is_neutral(tmp_path):
+    out = tmp_path / "acks.xlsx"
+    result = create_excel("销售", DATA, str(out), theme="acks")
+    assert result["theme"] == "acks" and result["rows"] == len(DATA)
+    assert _sheet(out)["A1"].value == "区域"
+    for theme in (None, "default"):  # 3.0 起默认主题是 neutral，default 是它的别名
+        result = create_excel("销售", DATA, str(tmp_path / f"{theme}.xlsx"), theme=theme)
+        assert result["theme"] == "neutral" and _sheet(tmp_path / f"{theme}.xlsx")["A1"].value == "销售"
 
 
 def test_sheet_variants_are_validated(tmp_path):

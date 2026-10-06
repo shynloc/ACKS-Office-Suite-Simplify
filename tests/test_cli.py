@@ -143,8 +143,9 @@ def test_merge_rules(run, tmp_path):
     run("create", "pdf", "-o", "a.pdf", "--content", "甲")
     run("create", "word", "-o", "b.docx", "--content", "乙")
 
-    code, env = run("merge", "a.pdf", "missing.pdf", "-o", "m.pdf")
-    assert code == 0 and [w["code"] for w in env["warnings"]] == ["INPUT_SKIPPED"]
+    code, env = run("merge", "a.pdf", "missing.pdf", "-o", "m.pdf")  # 3.0：缺文件直接报错，不再只合并一部分
+    assert code == 1 and env["error"]["code"] == "FILE_NOT_FOUND" and "missing.pdf" in env["error"]["message"]
+    assert not (tmp_path / "m.pdf").exists()
     assert run("merge", "missing1.pdf", "missing2.pdf", "-o", "n.pdf")[1]["error"]["code"] == "FILE_NOT_FOUND"
     assert run("merge", "a.pdf", "b.docx", "-o", "x.pdf")[1]["error"]["code"] == "UNSUPPORTED_FORMAT"
 

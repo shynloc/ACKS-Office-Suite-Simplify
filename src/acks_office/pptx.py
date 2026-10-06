@@ -1,9 +1,6 @@
 import os
 from typing import Optional, List, Dict, Any
 from pptx import Presentation
-from pptx.util import Pt, Inches
-from pptx.enum.text import PP_ALIGN
-from pptx.dml.color import RGBColor
 from pptx.oxml import parse_xml
 from pptx.oxml.ns import nsdecls, qn
 
@@ -12,7 +9,7 @@ TRANSITIONS = ("fade", "push", "wipe", "split", "cover", "pull", "dissolve", "cu
 
 
 def create_pptx(title: str, slides: List[Dict[str, Any]], output_path: str,
-                theme: Any = "acks",
+                theme: Any = None,
                 brand_name: Optional[str] = None,
                 **kwargs) -> Dict[str, Any]:
     """
@@ -31,11 +28,9 @@ def create_pptx(title: str, slides: List[Dict[str, Any]], output_path: str,
         meta_right: 标题页右上角文字（theme="acks" 生效）
         其余关键字参数（kicker、classification、publication、issue、season、date、author 等）作为元数据
     """
-    if isinstance(theme, str) and theme in ("acks", "default"):
+    if theme == "acks":  # 2.x 的 ACKS 样式
         brand = DEFAULT_BRAND if brand_name is None else brand_name
-        if theme == "acks":
-            return _create_pptx_acks(title, slides, output_path, brand, **kwargs)
-        return _create_pptx_default(title, slides, output_path, **kwargs)
+        return _create_pptx_acks(title, slides, output_path, brand, **kwargs)
     from .render.slides import render_slides
     options = ("base_dir", "font_policy", "footer_label")
     meta = {k: v for k, v in kwargs.items() if k not in options}
@@ -88,64 +83,6 @@ def _create_pptx_acks(title: str, slides: List[Dict[str, Any]], output_path: str
         "file_size": os.path.getsize(output_path),
         "slides_count": len(prs.slides),
         "theme": "acks",
-    }
-
-
-def _create_pptx_default(title: str, slides: List[Dict[str, Any]], output_path: str,
-                         **kwargs) -> Dict[str, Any]:
-    """原简单样式（内置布局 + 蓝色标题）。"""
-    prs = Presentation()
-
-    prs.slide_width = Inches(13.333)
-    prs.slide_height = Inches(7.5)
-
-    for slide_data in slides:
-        layout_type = slide_data.get("layout", "content")
-
-        if layout_type == "title":
-            slide_layout = prs.slide_layouts[0]
-        elif layout_type == "title_only":
-            slide_layout = prs.slide_layouts[5]
-        else:
-            slide_layout = prs.slide_layouts[1]
-
-        slide = prs.slides.add_slide(slide_layout)
-
-        if "title" in slide_data and slide.shapes.title:
-            title_shape = slide.shapes.title
-            title_shape.text = slide_data["title"]
-            for para in title_shape.text_frame.paragraphs:
-                para.font.size = Pt(36 if layout_type == "title" else 28)
-                para.font.bold = True
-                para.font.color.rgb = RGBColor(0, 51, 102)
-                para.alignment = PP_ALIGN.CENTER if layout_type == "title" else PP_ALIGN.LEFT
-
-        if "content" in slide_data and len(slide.placeholders) >= 2:
-            content_placeholder = slide.placeholders[1]
-            tf = content_placeholder.text_frame
-            tf.text = ""
-
-            lines = slide_data["content"].split('\n')
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                p = tf.add_paragraph()
-                p.text = line
-                p.font.size = Pt(24)
-                p.font.color.rgb = RGBColor(0, 0, 0)
-                if line.startswith('•') or line.startswith('-'):
-                    p.level = 1
-                else:
-                    p.level = 0
-
-    prs.save(output_path)
-
-    return {
-        "output_path": output_path,
-        "file_size": os.path.getsize(output_path),
-        "slides_count": len(prs.slides),
-        "theme": "default",
     }
 
 

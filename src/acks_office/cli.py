@@ -114,23 +114,28 @@ def _load_slides(file: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     return data, meta
 
 
-def _suite(theme: str):
+def _call(action, code: str) -> Any:
+    """调用 acks_office.api 的函数，把异常换成统一的错误码。"""
+    from .themes import ThemeError
     try:
-        from .core import OfficeSuite
+        return action()
+    except (CliError, ThemeError):
+        raise
     except ImportError as exc:
         raise CliError("DEPENDENCY_MISSING", f"缺少依赖：{exc.name or exc}",
                        "运行 doctor 命令查看缺少哪些依赖及安装步骤") from None
-    return OfficeSuite(theme=theme)
-
-
-def _from_result(result: Dict, code: str, output: Optional[str] = None) -> Dict:
-    if not result.get("success"):
-        message = result.get("error", "未知错误")
+    except FileNotFoundError as exc:
+        raise CliError("FILE_NOT_FOUND", str(exc)) from None
+    except Exception as exc:
+        message = str(exc) or type(exc).__name__
         if "LibreOffice" in message and "未找到" in message:
-            raise CliError("ENGINE_UNAVAILABLE", message, "运行 acks-office doctor 查看安装方式")
-        raise CliError(code, message)
-    data = {k: v for k, v in result.items() if k not in ("success", "warnings")}
-    return _envelope(True, data, [_artifact(output)] if output else [], result.get("warnings"))
+            raise CliError("ENGINE_UNAVAILABLE", message, "运行 acks-office doctor 查看安装方式") from None
+        raise CliError(code, message) from None
+
+
+def _done(result: Dict, output: Optional[str] = None) -> Dict:
+    warnings = result.pop("warnings", None)
+    return _envelope(True, result, [_artifact(output)] if output else [], warnings)
 
 
 # ---------------------------------------------------------------- 命令
@@ -156,7 +161,7 @@ def cmd_create(args) -> Dict:
         raise CliError("INVALID_INPUT", f"输出文件应以 {suffix} 结尾：{args.output}",
                        f"例如 -o {Path(args.output).stem or '输出'}{suffix}")
     _check_output(args.output, args.overwrite)
-    if args.theme not in ("acks", "default"):
+    if args.theme != "acks":
         from .themes import load_theme
         load_theme(args.theme)  # 主题不存在时直接报 THEME_NOT_FOUND
     kwargs: Dict[str, Any] = {"output_path": args.output, "font_policy": args.font_policy}
@@ -184,9 +189,9 @@ def cmd_create(args) -> Dict:
             raise CliError("INVALID_INPUT", "生成 Excel 需要 --data-file（JSON 二维数组、对象数组、{\"sheets\": [...]} 或 CSV）")
         data, sheets, table_meta = _load_table(args.data_file)
         if sheets is not None:
-            if args.theme in ("acks", "default"):
-                raise CliError("INVALID_INPUT", "多张工作表需要主题，2.x 的内置样式只支持二维数组",
-                               "加上 --theme neutral（或 slate、folio）")
+            if args.theme == "acks":
+                raise CliError("INVALID_INPUT", "多张工作表需要主题，2.x 的 ACKS 样式只支持二维数组",
+                               "去掉 --theme acks，或改用 neutral、slate、folio")
             kwargs["sheets"] = sheets
         else:
             kwargs["data"] = data
@@ -206,14 +211,15 @@ def cmd_create(args) -> Dict:
             elif key != "title":
                 kwargs.setdefault(key, value)
 
-    if kind == "excel" and args.theme not in ("acks", "default"):
+    if kind == "excel" and args.theme != "acks":
         # 表格的标题写在第 1 行：没给标题就不加标题行，工作表名用文件名
         kwargs["title"] = title or kwargs.get("title")
         kwargs.setdefault("sheet_name", Path(args.output).stem)
     else:
         kwargs["title"] = title or kwargs.get("title") or Path(args.output).stem
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    return _from_result(_suite(args.theme).create(kind, **kwargs), "CREATE_FAILED", args.output)
+    from . import api
+    return _done(_call(lambda: api.create(kind, theme=args.theme, **kwargs), "CREATE_FAILED"), args.output)
 
 
 def cmd_extract(args) -> Dict:
@@ -226,18 +232,17 @@ def cmd_extract(args) -> Dict:
     kwargs = {}
     if args.sheet is not None:
         kwargs["sheet_name"] = int(args.sheet) if args.sheet.isdigit() else args.sheet
-    result = _suite("acks").extract_data(args.file, **kwargs)
-    if not result.get("success"):
-        raise CliError("EXTRACT_FAILED", result.get("error", "未知错误"))
-    return _envelope(True, {"format": suffix.lstrip("."), _EXTRACT_KEY[suffix]: result["data"]})
+    from . import api
+    data = _call(lambda: api.extract(args.file, **kwargs), "EXTRACT_FAILED")
+    return _envelope(True, {"format": suffix.lstrip("."), _EXTRACT_KEY[suffix]: data})
 
 
 def cmd_convert(args) -> Dict:
     _check_input(args.file)
     output = args.output or str(Path(args.file).with_suffix("." + args.to.split(":")[0]))
     _check_output(output, args.overwrite)
-    return _from_result(_suite("acks").convert(args.file, to=args.to, output_path=output),
-                        "CONVERSION_FAILED", output)
+    from . import api
+    return _done(_call(lambda: api.convert(args.file, args.to, output), "CONVERSION_FAILED"), output)
 
 
 def cmd_watermark(args) -> Dict:
@@ -245,26 +250,19 @@ def cmd_watermark(args) -> Dict:
     source = Path(args.file)
     output = args.output or str(source.with_name(f"{source.stem}_watermarked{source.suffix}"))
     _check_output(output, args.overwrite)
-    return _from_result(_suite("acks").add_watermark(args.file, args.text, output_path=output),
-                        "WATERMARK_FAILED", output)
+    from . import api
+    return _done(_call(lambda: api.add_watermark(args.file, args.text, output), "WATERMARK_FAILED"), output)
 
 
 def cmd_merge(args) -> Dict:
     _check_output(args.output, args.overwrite)
-    if not any(Path(f).is_file() for f in args.files):
-        raise CliError("FILE_NOT_FOUND", f"要合并的文件都不存在：{', '.join(args.files)}")
-    suffixes = {Path(f).suffix.lower() for f in args.files}
-    if suffixes == {".pdf"}:
-        from .pdf import merge_pdfs as merge
-    elif suffixes == {".docx"}:
-        from .docx import merge_documents as merge
-    else:
+    missing = [f for f in args.files if not Path(f).is_file()]
+    if missing:
+        raise CliError("FILE_NOT_FOUND", f"要合并的文件不存在：{', '.join(missing)}", "检查文件路径后重试；不会只合并一部分")
+    if len({Path(f).suffix.lower() for f in args.files}) != 1 or Path(args.files[0]).suffix.lower() not in (".pdf", ".docx"):
         raise CliError("UNSUPPORTED_FORMAT", "只能合并同一种格式：全部 .pdf 或全部 .docx")
-    result = merge(args.files, args.output)
-    warnings = list(result.pop("warnings", []))
-    if result.get("skipped"):
-        warnings.append({"code": "INPUT_SKIPPED", "message": f"以下文件不存在，已跳过：{', '.join(result['skipped'])}"})
-    return _envelope(True, result, [_artifact(args.output)], warnings)
+    from . import api
+    return _done(_call(lambda: api.merge(args.files, args.output), "MERGE_FAILED"), args.output)
 
 
 def cmd_fonts(args) -> Dict:
@@ -365,8 +363,8 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--content-file", help="正文 Markdown 文件，- 表示从标准输入读取")
     p.add_argument("--data-file", help="Excel 数据：JSON 二维数组或 CSV")
     p.add_argument("--slides-file", help="PPT 幻灯片：JSON 数组")
-    p.add_argument("--theme", default="acks",
-                   help="主题名称（neutral、slate、folio 或已安装的主题）或主题目录；acks、default 是 2.x 的内置样式")
+    p.add_argument("--theme", default=None,
+                   help="主题名称（默认 neutral，另有 slate、folio 或已安装的主题）或主题目录")
     p.add_argument("--meta", action="append", metavar="KEY=VALUE",
                    help="文档元数据，可重复：kicker、author、date、version、issue、lede 等（也可写在正文 front matter）")
     p.add_argument("--font-policy", default="local", choices=["local", "theme"],
@@ -375,7 +373,7 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--footer-label", help="页脚文字")
     p.add_argument("--subtitle", help="封面副标题（Word）")
     p.add_argument("--font", help="PDF 中文字体文件路径（TrueType）")
-    p.add_argument("--chart", action="store_true", help="Excel 附柱状图（default 主题）")
+    p.add_argument("--chart", action="store_true", help="Excel 附图表（数值取第一个数字列）")
     p.add_argument("--overwrite", action="store_true", help="允许覆盖已有文件")
     p.set_defaults(func=cmd_create)
 

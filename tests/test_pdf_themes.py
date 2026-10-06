@@ -178,10 +178,12 @@ def test_font_override_must_be_truetype(tmp_path):
         create_pdf(None, "text", str(tmp_path / "x.pdf"), font=str(bogus), theme="slate")
 
 
-def test_legacy_pdf_theme_unchanged(tmp_path):
+def test_acks_pdf_theme_unchanged_and_default_is_neutral(tmp_path):
     out = tmp_path / "legacy.pdf"
-    result = create_pdf("Legacy", "Hello **world**", str(out))
+    result = create_pdf("Legacy", "Hello **world**", str(out), theme="acks")
     assert "font" in result and "theme" not in result and result["pages"] == 1
+    assert create_pdf("Plain", "Hello", str(tmp_path / "plain.pdf"))["theme"] == "neutral"
+    assert create_pdf("Alias", "Hello", str(tmp_path / "alias.pdf"), theme="default")["theme"] == "neutral"
 
 
 def test_cli_create_pdf_with_theme(tmp_path, capsys, monkeypatch):

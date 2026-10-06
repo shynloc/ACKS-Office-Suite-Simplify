@@ -20,7 +20,7 @@ from . import __version__, fonts
 from .utils import data_dir, find_soffice
 
 SCHEMA = "doctor/1"
-MIN_PYTHON = (3, 9)
+MIN_PYTHON = (3, 10)
 # (发行包, 导入名, 版本要求)：与 pyproject.toml 的 dependencies 保持一致（有测试核对）
 DEPENDENCIES = [("python-docx", "docx", ">=1.1.0"), ("openpyxl", "openpyxl", ">=3.1.2"),
                 ("python-pptx", "pptx", ">=0.6.23"), ("reportlab", "reportlab", ">=4.0.0"),

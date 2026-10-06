@@ -297,7 +297,7 @@ class SlideRenderer:
         y = top + max(0, (bottom - top - total) / 2) if big else top
         if not big:
             self.hline(slide, x, y, width)
-        for i, (kpi, h) in enumerate(zip(kpis, heights)):
+        for i, (kpi, h) in enumerate(zip(kpis, heights, strict=True)):
             cy = y + pad
             self.box(slide, x, cy, width, label_size * 1.4,
                      [para(r(str(kpi.get("label", "")), role="label", size=label_size, color="muted", bold=False))])

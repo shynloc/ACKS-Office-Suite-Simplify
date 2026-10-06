@@ -26,11 +26,11 @@ def _is_cjk(text: str) -> bool:
     return any('一' <= ch <= '鿿' for ch in text)
 
 
-LEGACY_THEMES = ("acks", "default")
+LEGACY_THEMES = ("acks",)  # 2.x 的 ACKS 样式；"default" 为 neutral 的别名
 
 
 def create_word(title: Optional[str], content: str, output_path: str,
-                theme: Any = "acks",
+                theme: Any = None,
                 brand_name: Optional[str] = None,
                 footer_label: Optional[str] = None,
                 **kwargs) -> Dict[str, Any]:
@@ -53,11 +53,9 @@ def create_word(title: Optional[str], content: str, output_path: str,
     if isinstance(theme, str) and theme in LEGACY_THEMES:
         blocks = mdb.parse(content)
         base_dir = kwargs.get("base_dir") or os.getcwd()
-        if theme == "acks":
-            brand = DEFAULT_BRAND if brand_name is None else brand_name
-            return _create_word_acks(title or "", blocks, output_path, brand, footer_label, base_dir,
-                                     kwargs.get("subtitle", ""))
-        return _create_word_default(title or "", blocks, output_path, base_dir)
+        brand = DEFAULT_BRAND if brand_name is None else brand_name
+        return _create_word_acks(title or "", blocks, output_path, brand, footer_label, base_dir,
+                                 kwargs.get("subtitle", ""))
     from .render.common import META_KEYS
     from .render.word import render_word
     meta = {key: kwargs[key] for key in kwargs if key in META_KEYS or key not in _RENDER_OPTIONS}
@@ -82,7 +80,6 @@ def _result(doc, output_path: str, theme: str, warnings: List[Dict]) -> Dict[str
     result = {
         "output_path": output_path,
         "file_size": os.path.getsize(output_path),
-        "pages": int(len(doc.paragraphs) / 30) + 1,  # 估算页数
         "theme": theme,
     }
     if warnings:
@@ -120,27 +117,6 @@ def _add_cover_acks(doc, title: str, brand_name: str, acks, subtitle: str = "") 
             doctype="", brand_name=brand_name,
         )
 
-
-def _create_word_default(title: str, blocks, output_path: str, base_dir: str) -> Dict[str, Any]:
-    """原简单样式（宋体 + 蓝色标题）。"""
-    doc = Document()
-
-    doc.styles['Normal'].font.name = '宋体'
-    doc.styles['Normal'].font.size = Pt(12)
-
-    title_para = doc.add_heading(title, level=0)
-    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    title_para.runs[0].font.size = Pt(24)
-    title_para.runs[0].font.bold = True
-    title_para.runs[0].font.color.rgb = RGBColor(0, 51, 102)
-
-    doc.add_paragraph()
-    warnings = _DefaultRenderer(doc, base_dir).render(blocks)
-    doc.save(output_path)
-    return _result(doc, output_path, "default", warnings)
-
-
-# ---------------------------------------------------------------- Markdown → Word
 
 def _add_hyperlink(par, url: str) -> Run:
     r_id = par.part.relate_to(url, RT.HYPERLINK, is_external=True)
@@ -441,13 +417,14 @@ def add_watermark(input_path: str, watermark_text: str, output_path: Optional[st
     Args:
         input_path: 输入文件路径
         watermark_text: 水印文本
-        output_path: 输出文件路径（默认覆盖输入）
+        output_path: 输出文件路径，默认为 <原名>_watermarked.docx，不覆盖原文件
         font_size: 字号
         color: RGB 颜色元组
         italic: 是否斜体
     """
     if not output_path:
-        output_path = input_path
+        from .api import watermarked_path
+        output_path = watermarked_path(input_path)
 
     doc = Document(input_path)
 
@@ -525,17 +502,17 @@ def _copy_relationships(element, src_part, dst_part) -> List[Dict]:
 
 def merge_documents(input_paths: List[str], output_path: str, **kwargs) -> Dict[str, Any]:
     """
-    合并多个 Word 文档：以第一份为底（沿用其样式与页面设置），后续文档另起一页接在后面
+    合并多个 Word 文档：以第一份为底（沿用其样式与页面设置），后续文档另起一页接在后面。
+    任一文件不存在时报错，不会只合并一部分。
     """
+    missing = [p for p in input_paths if not os.path.exists(p)]
+    if missing:
+        raise FileNotFoundError(f"要合并的文件不存在：{', '.join(missing)}")
     merged = None
     merged_count = 0
-    skipped: List[str] = []
     warnings: List[Dict] = []
 
     for path in input_paths:
-        if not os.path.exists(path):
-            skipped.append(path)
-            continue
         if merged is None:
             merged = Document(path)
         else:
@@ -563,8 +540,6 @@ def merge_documents(input_paths: List[str], output_path: str, **kwargs) -> Dict[
     merged.save(output_path)
 
     result: Dict[str, Any] = {"output_path": output_path, "merged_count": merged_count}
-    if skipped:
-        result["skipped"] = skipped
     if warnings:
         result["warnings"] = [dict(t) for t in {tuple(w.items()) for w in warnings}]
     return result

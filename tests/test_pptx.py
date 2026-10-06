@@ -4,7 +4,7 @@ import pytest
 from pptx import Presentation
 from pptx.oxml.ns import qn
 
-from acks_office import OfficeSuite
+import acks_office
 from acks_office.pptx import TRANSITIONS, add_transition_effects, create_pptx
 
 SLIDES = [
@@ -24,14 +24,20 @@ def _texts(path):
 def deck(tmp_path):
     def make(**kwargs):
         out = tmp_path / "deck.pptx"
+        kwargs.setdefault("theme", "acks")  # 这些用例针对 2.x 的 ACKS 样式
         create_pptx("演示", SLIDES, str(out), **kwargs)
         return out
     return make
 
 
-def test_default_brand_is_kept(deck):
+def test_acks_brand_is_kept(deck):
     flat = "\n".join(t for slide in _texts(deck()) for t in slide)
     assert "ACKS STUDIO" in flat and "CONFIDENTIAL" in flat
+
+
+def test_default_theme_has_no_brand(deck):
+    flat = "\n".join(t for slide in _texts(deck(theme=None)) for t in slide)
+    assert "ACKS" not in flat and "CONFIDENTIAL" not in flat
 
 
 def test_empty_brand_removes_brand_everywhere(deck):
@@ -87,5 +93,4 @@ def test_unknown_effect_is_rejected(deck):
 
 
 def test_extract_returns_text_per_slide(deck):
-    result = OfficeSuite().extract_data(str(deck()))
-    assert result["success"] and "核心结论" in result["data"][3]
+    assert "核心结论" in acks_office.extract(str(deck()))[3]

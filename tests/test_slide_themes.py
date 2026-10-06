@@ -152,10 +152,13 @@ def test_cli_slides_file_with_deck_meta(tmp_path, capsys, monkeypatch):
     assert json.loads(capsys.readouterr().out)["error"]["code"] == "INVALID_INPUT"
 
 
-def test_legacy_themes_still_work(tmp_path):
+def test_acks_theme_still_works_and_default_is_neutral(tmp_path):
     out = tmp_path / "acks.pptx"
-    create_pptx("T", [{"title": "经营回顾", "layout": "title"}], str(out))
+    create_pptx("T", [{"title": "经营回顾", "layout": "title"}], str(out), theme="acks")
     assert "ACKS STUDIO" in "\n".join(_texts(Presentation(str(out)).slides[0]))
+    plain = tmp_path / "plain.pptx"
+    assert create_pptx("T", [{"title": "经营回顾", "layout": "title"}], str(plain))["theme"] == "neutral"
+    assert "ACKS" not in "\n".join(_texts(Presentation(str(plain)).slides[0]))
 
 
 # ---------------------------------------------------------------- LibreOffice 字体替换表

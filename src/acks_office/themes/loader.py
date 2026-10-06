@@ -17,6 +17,7 @@ from .model import Theme, ThemeError, ThemeRef
 BUILTIN_DIR = Path(__file__).parent / "builtin"
 BASE = "_base"
 DEFAULT_THEME = "neutral"
+ALIASES = {"default": DEFAULT_THEME}  # 2.x 的 theme="default"（简单样式）在 3.0 起指中性主题
 FILES = ("theme", "tokens", "fonts", "chrome")
 NAME = re.compile(r"^_?[a-z0-9][a-z0-9_-]{0,63}$")  # 以 _ 开头的是内部主题
 _CACHE: Dict[str, Theme] = {}
@@ -116,6 +117,8 @@ def load_theme(ref: ThemeRef = None, use_cache: bool = True) -> Theme:
     if isinstance(ref, Theme):
         return ref
     ref = str(ref) if ref else DEFAULT_THEME
+    if ref in ALIASES:
+        ref = ALIASES[ref]
     key = f"{ref}|{os.environ.get('ACKS_OFFICE_THEMES', '')}|{data_dir()}"
     if use_cache and key in _CACHE:
         return _CACHE[key]

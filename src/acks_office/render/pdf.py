@@ -274,7 +274,7 @@ class PdfRenderer:
         widths = [stringWidth(chunk, name, size) for name, chunk in runs]
         x -= {"left": 0, "center": sum(widths) / 2, "right": sum(widths)}[align]
         canvas.setFillColor(self.color(color))
-        for (name, chunk), width in zip(runs, widths):
+        for (name, chunk), width in zip(runs, widths, strict=True):
             canvas.setFont(name, size)
             canvas.drawString(x, y, chunk)
             x += width

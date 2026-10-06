@@ -175,7 +175,8 @@ class PdfFontBook:
         if key in self._faces:
             return self._faces[key]
         if script == "cn" and self._override:
-            return self._override[1 if weight >= 600 else 0]
+            self._faces[key] = self._override[1 if weight >= 600 else 0]
+            return self._faces[key]
         names = self.t.family_candidates(slot, script)
         category = _category(names, script)
         tried = list(names)

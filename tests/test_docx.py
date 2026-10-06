@@ -112,12 +112,12 @@ def test_default_theme_restarts_each_ordered_list(tmp_path):
     assert starts == {"一": "1", "二": "1", "三": "1", "四": "1", "从三开始": "3"}
 
 
-def test_default_theme_task_items_have_only_a_checkbox(tmp_path):
+def test_task_items_have_only_a_checkbox(tmp_path):
     out = tmp_path / "k.docx"
-    create_word("标题", "- [ ] 待办\n- [x] 完成", str(out), theme="default")
+    create_word("标题", "- [ ] 待办\n- [x] 完成", str(out), theme="default")  # default 即 neutral
     items = [p for p in Document(str(out)).paragraphs if p.text.endswith(("待办", "完成"))]
     assert [p.text for p in items] == ["☐ 待办", "☑ 完成"]
-    assert all(p.style.name == "List Paragraph" and p._p.pPr.numPr is None for p in items)
+    assert all(p._p.pPr.numPr is None for p in items)
 
 
 @pytest.mark.parametrize("size, expect_native", [((120, 60), True), ((4000, 1000), False)])
@@ -142,16 +142,19 @@ def test_missing_image_becomes_placeholder_with_warning(tmp_path):
     assert "[图片：图注]" in extract_text(str(tmp_path / "m.docx"))
 
 
-def test_merge_keeps_images_and_reports_skipped(tmp_path, png):
+def test_merge_keeps_images_and_refuses_missing_files(tmp_path, png):
     image = png(200, 100, name="pic.png")
     first, second, merged = tmp_path / "1.docx", tmp_path / "2.docx", tmp_path / "merged.docx"
     create_word("第一份", "第一份正文", str(first), theme="default")
     create_word("第二份", "第二份正文\n\n![图](pic.png)\n\n[链接](https://example.com)", str(second),
                 theme="default", base_dir=str(tmp_path))
 
-    result = merge_documents([str(first), str(tmp_path / "missing.docx"), str(second)], str(merged))
+    with pytest.raises(FileNotFoundError):  # 3.0：缺文件直接报错，不会只合并一部分
+        merge_documents([str(first), str(tmp_path / "missing.docx"), str(second)], str(merged))
+    assert not merged.exists()
+    result = merge_documents([str(first), str(second)], str(merged))
 
-    assert result["merged_count"] == 2 and result["skipped"] == [str(tmp_path / "missing.docx")]
+    assert result["merged_count"] == 2 and "skipped" not in result
     doc = Document(str(merged))
     text = extract_text(str(merged))
     assert text.index("第一份正文") < text.index("第二份正文")

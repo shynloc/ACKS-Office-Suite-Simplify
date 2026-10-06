@@ -21,11 +21,11 @@ _ALERT_LABELS = {"note": "Note · 注释", "tip": "Tip · 提示", "important": 
                  "warning": "Warning · 警告", "caution": "Caution · 注意"}
 
 
-LEGACY_THEMES = ("acks", "default")
+LEGACY_THEMES = ("acks",)  # 2.x 的 ACKS 样式；"default" 为 neutral 的别名
 
 
 def create_pdf(title: Optional[str], content: str, output_path: str,
-               font: Optional[str] = None, bold_font: Optional[str] = None, theme: Any = "acks",
+               font: Optional[str] = None, bold_font: Optional[str] = None, theme: Any = None,
                brand_name: Optional[str] = None, footer_label: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     创建PDF文档
@@ -221,12 +221,13 @@ def add_watermark(input_path: str, watermark_text: str, output_path: Optional[st
     Args:
         input_path: 输入文件路径
         watermark_text: 水印文本（支持中文）
-        output_path: 输出文件路径（默认覆盖输入）
+        output_path: 输出文件路径，默认为 <原名>_watermarked.pdf，不覆盖原文件
         opacity: 透明度 0~1，默认 0.15
         position: 水印位置 "diagonal"（沿对角线斜排）或 "center"
     """
     if not output_path:
-        output_path = input_path
+        from .api import watermarked_path
+        output_path = watermarked_path(input_path)
 
     writer = PdfWriter(clone_from=input_path)
     stamps: Dict[tuple, Any] = {}
@@ -278,25 +279,20 @@ def extract_text(input_path: str, **kwargs) -> str:
 
 def merge_pdfs(input_paths: List[str], output_path: str, **kwargs) -> Dict[str, Any]:
     """
-    合并多个PDF文件；不存在的文件会列在结果的 skipped 里
+    合并多个 PDF 文件。任一文件不存在时报错，不会只合并一部分。
     """
+    missing = [p for p in input_paths if not os.path.exists(p)]
+    if missing:
+        raise FileNotFoundError(f"要合并的文件不存在：{', '.join(missing)}")
     writer = PdfWriter()
-    skipped = []
-
     for path in input_paths:
-        if not os.path.exists(path):
-            skipped.append(path)
-            continue
         for page in PdfReader(path).pages:
             writer.add_page(page)
 
     with open(output_path, 'wb') as f:
         writer.write(f)
 
-    result: Dict[str, Any] = {"output_path": output_path, "merged_pages": len(writer.pages)}
-    if skipped:
-        result["skipped"] = skipped
-    return result
+    return {"output_path": output_path, "merged_pages": len(writer.pages)}
 
 def split_pdf(input_path: str, output_dir: str, split_by: str = "page", **kwargs) -> Dict[str, Any]:
     """

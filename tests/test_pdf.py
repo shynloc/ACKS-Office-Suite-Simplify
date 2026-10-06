@@ -27,37 +27,32 @@ def _text(path):
     return "\n".join(page.extract_text() for page in PdfReader(str(path)).pages)
 
 
-@pytest.fixture
-def no_system_fonts(monkeypatch):
-    """模拟没有任何可嵌入中文字体的环境。"""
-    monkeypatch.setattr(fonts, "_installed_catalog_fonts", lambda: [])
-    monkeypatch.setattr(fonts, "_system_cjk_candidates", lambda: [])
-    monkeypatch.delenv("ACKS_OFFICE_PDF_FONT", raising=False)
-
-
 def test_chinese_is_embedded_with_given_font(tmp_path, cjk_font):
     out = tmp_path / "a.pdf"
-    result = create_pdf("中文测试报告", "第一行\n第二行", str(out), font=cjk_font)
+    result = create_pdf("中文测试报告", "第一行\n\n第二行", str(out), font=cjk_font)
 
-    assert result["font"]["embedded"] and result["font"]["source"] == "argument"
-    assert "warnings" not in result
+    assert result["theme"] == "neutral" and "AcksTest" in result["fonts"]
+    assert not any(w["code"] == "FONT_NOT_EMBEDDED" for w in result.get("warnings", []))
     embedded = [name for name, ok in _fonts(out).items() if ok]
-    assert embedded and all(name.endswith("AcksTest-Regular") for name in embedded)
-    assert "中文测试报告\n第一行\n第二行" in _text(out)
+    assert any(name.endswith("AcksTest-Regular") for name in embedded)  # 中文用指定的字体并嵌入
+    text = _text(out)
+    assert all(part in text for part in ("中文测试报告", "第一行", "第二行"))
 
 
 def test_font_from_environment_variable(tmp_path, cjk_font, monkeypatch):
     monkeypatch.setenv("ACKS_OFFICE_PDF_FONT", cjk_font)
     result = create_pdf("中文测试", "正文", str(tmp_path / "e.pdf"))
-    assert result["font"]["source"] == "env" and result["font"]["embedded"]
+    assert "AcksTest" in result["fonts"]
 
 
-def test_falls_back_to_builtin_cid_font_with_warning(tmp_path, no_system_fonts):
+def test_falls_back_to_reader_font_with_warning(tmp_path, monkeypatch):
+    monkeypatch.setattr(fonts, "best_face", lambda *a, **k: None)  # 本机没有任何能嵌入的字体
+    monkeypatch.delenv("ACKS_OFFICE_PDF_FONT", raising=False)
     out = tmp_path / "f.pdf"
     result = create_pdf("中文测试", "第一行", str(out))
 
-    assert result["font"]["source"] == "builtin" and not result["font"]["embedded"]
-    assert [w["code"] for w in result["warnings"]] == ["FONT_FALLBACK"]
+    assert result["fonts"] == []
+    assert "FONT_NOT_EMBEDDED" in [w["code"] for w in result["warnings"]]
     assert "中文测试" in _text(out)
 
 
@@ -83,7 +78,8 @@ def test_markdown_structures(tmp_path, cjk_font):
     result = create_pdf("中文测试", content, str(out), font=cjk_font)
 
     text = _text(out)
-    for expected in ("区域营收", "华东", "5,888", "1.", "步骤二", "□", "待办", "■", "完成", "Note", "code < 1"):
+    # 提示块的标签来自主题（「说明」），测试字体里没有这两个字，这里只核对正文
+    for expected in ("区域营收", "华东", "5,888", "1.", "步骤二", "□", "待办", "■", "完成", "段落", "code < 1"):
         assert expected in text
     assert "ZapfDingbats" not in "".join(_fonts(out))  # 任务标记用正文字体，不靠符号字体替换
     assert result["pages"] == 1
