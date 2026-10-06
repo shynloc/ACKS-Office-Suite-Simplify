@@ -74,7 +74,7 @@ acks-office fonts install noto-sans-sc
 
 ### 命令行
 
-子命令：`create`、`extract`、`convert`、`watermark`、`merge`、`fonts`、`doctor`、`version`。
+子命令：`create`、`extract`、`convert`、`watermark`、`merge`、`theme`、`fonts`、`doctor`、`version`。
 以下输入文件由用户准备，数据格式见
 [命令参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/skills/acks-office/references/commands.md)。
 

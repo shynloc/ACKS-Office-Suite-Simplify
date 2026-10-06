@@ -59,6 +59,8 @@ def font_dirs() -> List[Path]:
     if sys.platform == "darwin":
         dirs = [Path("/System/Library/Fonts"), Path("/System/Library/Fonts/Supplemental"),
                 Path("/Library/Fonts"), home / "Library" / "Fonts"]
+        # 苹方等系统字体在新版 macOS 里按需下载，放在资源目录里
+        dirs += sorted(Path("/System/Library/AssetsV2").glob("com_apple_MobileAsset_Font*"))
     elif os.name == "nt":
         dirs = [Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"]
         if os.environ.get("LOCALAPPDATA"):
@@ -81,6 +83,241 @@ def _font_files(limit: int = 20000) -> List[Path]:
                     if len(files) >= limit:
                         return files
     return files
+
+
+# ---------------------------------------------------------------- 读取字体内部名称
+
+@dataclass(frozen=True)
+class FontFace:
+    """字体文件里的一款字形：家族名（含本地化名称）、字重、是否斜体、轮廓类型。"""
+    path: str
+    index: int
+    families: Tuple[str, ...]
+    style: str
+    weight: int
+    italic: bool
+    truetype: bool  # glyf 轮廓才能被 reportlab 嵌入；CFF 轮廓不能
+    variable: bool
+
+
+def _u16(data: bytes, offset: int) -> int:
+    return int.from_bytes(data[offset:offset + 2], "big")
+
+
+def _u32(data: bytes, offset: int) -> int:
+    return int.from_bytes(data[offset:offset + 4], "big")
+
+
+def _name_strings(table: bytes, wanted: Tuple[int, ...]) -> Dict[int, List[str]]:
+    """name 表里指定编号的全部字符串（各语言都收），英文排在前面。"""
+    found: Dict[int, List[Tuple[int, str]]] = {i: [] for i in wanted}
+    count, base = _u16(table, 2), _u16(table, 4)
+    for i in range(count):
+        rec = 6 + 12 * i
+        platform, encoding, language, name_id = (_u16(table, rec), _u16(table, rec + 2),
+                                                 _u16(table, rec + 4), _u16(table, rec + 6))
+        if name_id not in found:
+            continue
+        raw = table[base + _u16(table, rec + 10): base + _u16(table, rec + 10) + _u16(table, rec + 8)]
+        if platform in (0, 3):
+            text = raw.decode("utf-16-be", "ignore")
+        elif platform == 1 and encoding == 0:
+            text = raw.decode("mac_roman", "ignore")
+        else:
+            continue
+        english = (platform == 3 and language == 0x409) or (platform == 1 and language == 0)
+        if text.strip():
+            found[name_id].append((0 if english else 1, text.strip()))
+    return {k: list(dict.fromkeys(t for _, t in sorted(v))) for k, v in found.items()}
+
+
+def _read_face(f, offset: int, path: str, index: int) -> Optional[FontFace]:
+    f.seek(offset)
+    head = f.read(12)
+    if len(head) < 12:
+        return None
+    count = _u16(head, 4)
+    records = f.read(16 * count)
+    tables = {records[i * 16:i * 16 + 4]: (_u32(records, i * 16 + 8), _u32(records, i * 16 + 12))
+              for i in range(count)}
+    if b"name" not in tables:
+        return None
+    f.seek(tables[b"name"][0])
+    names = _name_strings(f.read(tables[b"name"][1]), (1, 2, 16, 17))
+    weight, italic = 400, False
+    if b"OS/2" in tables:
+        f.seek(tables[b"OS/2"][0])
+        os2 = f.read(64)
+        if len(os2) >= 64:
+            weight, italic = _u16(os2, 4), bool(_u16(os2, 62) & 1)
+    families = tuple(dict.fromkeys(names[16] + names[1]))
+    if not families:
+        return None
+    style = (names[17] or names[2] or ["Regular"])[0]
+    return FontFace(path, index, families, style, weight, italic or "italic" in style.lower(),
+                    b"glyf" in tables, b"fvar" in tables)
+
+
+def read_font_faces(path: str) -> List[FontFace]:
+    """读取一个字体文件（.ttf / .otf / .ttc）里的全部字形信息；读不了的文件返回空列表。"""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(12)
+            if head[:4] == b"ttcf":
+                offsets = f.read(4 * _u32(head, 8))
+                return [face for i in range(len(offsets) // 4)
+                        if (face := _read_face(f, _u32(offsets, 4 * i), path, i))]
+            face = _read_face(f, 0, path, 0)
+            return [face] if face else []
+    except (OSError, ValueError, IndexError):
+        return []
+
+
+_FACES: Optional[List[FontFace]] = None
+_CACHE_VERSION = 1
+
+
+def _cache_path() -> Path:
+    return data_dir() / "cache" / "font-faces.json"
+
+
+def font_faces(refresh: bool = False, write_cache: bool = True) -> List[FontFace]:
+    """本机全部字体（系统、用户目录与本工具下载的），同一进程内只扫描一次。
+
+    读过的文件按路径、大小、修改时间缓存在用户数据目录；write_cache=False 时只读缓存
+    （doctor 用，保证只读）。
+    """
+    global _FACES
+    if _FACES is not None and not refresh:
+        return _FACES
+    try:
+        cached = json.loads(_cache_path().read_text(encoding="utf-8"))
+        if cached.get("version") != _CACHE_VERSION:
+            cached = {}
+    except (OSError, ValueError):
+        cached = {}
+    entries, faces, changed = {}, [], False
+    for path in _font_files():
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        stamp = [stat.st_size, int(stat.st_mtime)]
+        hit = cached.get("files", {}).get(str(path))
+        if hit and hit["stamp"] == stamp:
+            found = [FontFace(**dict(f, families=tuple(f["families"]))) for f in hit["faces"]]
+        else:
+            found, changed = read_font_faces(str(path)), True
+        entries[str(path)] = {"stamp": stamp, "faces": [asdict(f) for f in found]}
+        faces.extend(found)
+    if write_cache and (changed or len(entries) != len(cached.get("files", {}))):
+        try:
+            _cache_path().parent.mkdir(parents=True, exist_ok=True)
+            _cache_path().write_text(json.dumps({"version": _CACHE_VERSION, "files": entries},
+                                                ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass  # 缓存只是加速，写不了不影响结果
+    _FACES = faces
+    return faces
+
+
+def _key(name: str) -> str:
+    return re.sub(r"[\s_-]+", "", name).lower()
+
+
+def faces_of(family: str) -> List[FontFace]:
+    """某个字体家族在本机的全部字形（名称不区分大小写与空格，本地化名称也算）。"""
+    key = _key(family)
+    return [face for face in font_faces() if any(_key(name) == key for name in face.families)]
+
+
+def family_installed(family: str) -> bool:
+    return bool(faces_of(family))
+
+
+def best_face(family: str, weight: int = 400, italic: bool = False,
+              truetype: bool = False) -> Optional[FontFace]:
+    """在某个家族里挑最接近要求的字形；truetype=True 时只要 reportlab 能嵌入的。"""
+    faces = [face for face in faces_of(family) if face.truetype or not truetype]
+    if not faces:
+        return None
+    return min(faces, key=lambda face: (face.italic != italic, face.variable,
+                                        abs(face.weight - weight), face.path))
+
+
+def _cmap_codepoints(table: bytes) -> set:
+    """cmap 表里能映射到字形的码位（只读 format 4 与 12，覆盖常见字体）。"""
+    best = None
+    for i in range(_u16(table, 2)):
+        rec = 4 + 8 * i
+        platform, encoding, offset = _u16(table, rec), _u16(table, rec + 2), _u32(table, rec + 4)
+        fmt = _u16(table, offset)
+        # 与 fontTools 的 getBestCmap 一致：完整 Unicode 优先，同类时 Windows 子表优先
+        windows = platform == 3 and encoding in (1, 10)
+        if fmt not in (4, 12) or not (windows or platform == 0):
+            continue
+        rank = (0 if fmt == 12 else 2) + (0 if windows else 1)
+        if best is None or rank < best[0]:
+            best = (rank, offset, fmt)
+    points: set = set()
+    if best is None:
+        return points
+    _, offset, fmt = best
+    if fmt == 4:
+        segs = _u16(table, offset + 6) // 2
+        ends, starts = offset + 14, offset + 16 + 2 * segs
+        deltas, ranges = starts + 2 * segs, starts + 4 * segs
+        for s in range(segs):
+            end, start = _u16(table, ends + 2 * s), _u16(table, starts + 2 * s)
+            delta, range_offset = _u16(table, deltas + 2 * s), _u16(table, ranges + 2 * s)
+            for cp in range(start, min(end, 0xFFFE) + 1):
+                if range_offset == 0:
+                    glyph = (cp + delta) & 0xFFFF
+                else:
+                    at = ranges + 2 * s + range_offset + 2 * (cp - start)
+                    glyph = _u16(table, at)
+                    glyph = (glyph + delta) & 0xFFFF if glyph else 0
+                if glyph:
+                    points.add(cp)
+    elif fmt == 12:
+        for g in range(_u32(table, offset + 12)):
+            rec = offset + 16 + 12 * g
+            start = _u32(table, rec) + (1 if _u32(table, rec + 8) == 0 else 0)  # 跳过映射到 .notdef 的码位
+            points.update(range(start, _u32(table, rec + 4) + 1))
+    return points
+
+
+def face_codepoints(face: FontFace) -> set:
+    """某款字形支持的字符码位。读不了时返回空集合。"""
+    try:
+        with open(face.path, "rb") as f:
+            head = f.read(12)
+            offset = 0
+            if head[:4] == b"ttcf":
+                f.seek(12 + 4 * face.index)
+                offset = _u32(f.read(4), 0)
+            f.seek(offset)
+            count = _u16(f.read(12), 4)
+            records = f.read(16 * count)
+            for i in range(count):
+                if records[i * 16:i * 16 + 4] == b"cmap":
+                    f.seek(_u32(records, i * 16 + 8))
+                    return _cmap_codepoints(f.read(_u32(records, i * 16 + 12)))
+    except (OSError, ValueError, IndexError):
+        pass
+    return set()
+
+
+def common_hanzi() -> List[str]:
+    """GB2312 一级字（3755 个常用汉字），用来检查中文字体的覆盖率。"""
+    chars = []
+    for hi in range(0xB0, 0xD8):
+        for lo in range(0xA1, 0xFF):
+            try:
+                chars.append(bytes([hi, lo]).decode("gb2312"))
+            except UnicodeDecodeError:
+                continue
+    return chars
 
 
 def _norm(name: str) -> str:

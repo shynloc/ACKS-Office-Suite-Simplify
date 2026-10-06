@@ -1,0 +1,9 @@
+{
+  "schema": "acks-office-theme/1",
+  "name": "_base",
+  "title": "基础主题",
+  "description": "全部设计令牌的默认值；其他主题都从它继承，只写需要改的部分。",
+  "version": "1.0.0",
+  "author": "ACKS Studio",
+  "license": "MIT"
+}

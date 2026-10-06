@@ -226,6 +226,24 @@ def cmd_fonts(args) -> Dict:
     return _envelope(True, fonts.fonts_report())
 
 
+def cmd_theme(args) -> Dict:
+    from . import themes
+    if args.action == "list":
+        return _envelope(True, {"default": themes.DEFAULT_THEME, "user_dir": str(themes.user_theme_dir()),
+                                "themes": themes.list_themes()})
+    if not args.name:
+        raise CliError("USAGE_ERROR", "请指定主题名称或主题目录", f"例如 theme {args.action} slate")
+    if args.action == "show":
+        return _envelope(True, themes.load_theme(args.name).describe())
+    report = themes.validate_theme(args.name, check_installed=not args.no_fonts)
+    if report["ok"]:
+        return _envelope(True, report, warnings=report["warnings"])
+    first = report["errors"][0]
+    return _envelope(False, report, warnings=report["warnings"],
+                     error={"code": "THEME_INVALID", "message": f"主题 {report['theme']} 有 {len(report['errors'])} 处错误",
+                            "hint": f"{first['path']}：{first['message']}"})
+
+
 # ---------------------------------------------------------------- 入口
 
 class _Parser(argparse.ArgumentParser):
@@ -296,6 +314,12 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--overwrite", action="store_true")
     p.set_defaults(func=cmd_merge)
 
+    p = sub.add_parser("theme", parents=[common], help="查看、校验主题")
+    p.add_argument("action", choices=["list", "show", "validate"])
+    p.add_argument("name", nargs="?", help="主题名称（如 slate）或主题目录")
+    p.add_argument("--no-fonts", action="store_true", help="校验时不检查本机字体")
+    p.set_defaults(func=cmd_theme)
+
     p = sub.add_parser("fonts", parents=[common], help="查看字体情况或安装开源字体")
     p.add_argument("action", choices=["list", "install"])
     p.add_argument("name", nargs="?", help="要安装的字体，如 noto-sans-sc")
@@ -303,12 +327,31 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _print_theme_report(report: Dict) -> None:
+    status = "通过" if report["ok"] else f"未通过：{len(report['errors'])} 处错误"
+    print(f"主题 {report['theme']}（{report.get('title', '')}）校验{status}，{len(report['warnings'])} 条提醒")
+    for item in report["errors"]:
+        print(f"  错误 {item['path']}：{item['message']}")
+    for item in report["warnings"]:
+        print(f"  提醒 {item['path']}：{item['message']}")
+
+
 def _print_human(command: str, env: Dict) -> None:
+    if command == "theme" and isinstance(env["data"], dict) and "contrast" in env["data"]:
+        _print_theme_report(env["data"])
+        return
     if not env["ok"]:
         err = env["error"]
         print(f"错误：{err['message']}")
         if err.get("hint"):
             print(f"提示：{err['hint']}")
+        for warning in env["warnings"]:
+            print(f"注意：{warning.get('message', warning)}")
+        return
+    if command == "theme" and isinstance(env["data"], dict) and "themes" in env["data"]:
+        for t in env["data"]["themes"]:
+            mark = "（默认）" if t["name"] == env["data"]["default"] else ""
+            print(f"{t['name']:12} {t.get('title', '')}{mark} · {t['source']} · {t.get('description', '')}")
         return
     if command == "doctor":
         r = env["data"]
@@ -347,9 +390,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             env = args.func(args)
         except CliError as exc:
             env = _error(exc)
-        except Exception as exc:  # 未预料的错误也按统一格式返回
-            env = _error(CliError("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}",
-                                  "可先运行 acks-office doctor 检查环境"))
+        except Exception as exc:  # 主题错误带自己的错误码；其他未预料的错误也按统一格式返回
+            from .themes import ThemeError
+            if isinstance(exc, ThemeError):
+                env = _error(CliError(exc.code, exc.message, exc.hint))
+            else:
+                env = _error(CliError("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}",
+                                      "可先运行 acks-office doctor 检查环境"))
         status = 0 if env["ok"] else 1
     if args.json:
         # Windows 管道里控制台编码不一定是 UTF-8，此时输出转义后的 JSON，保证可解析

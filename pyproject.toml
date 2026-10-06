@@ -61,6 +61,7 @@ exclude = ["acks_office.design_system.tests*"]
 
 [tool.setuptools.package-data]
 "acks_office.design_system" = ["tokens.json", "assets/*.png"]
+"acks_office.themes" = ["builtin/*/*.json", "builtin/*/*.md", "builtin/*/assets/*"]
 
 # 设计规范自带的测试只在源码里运行，不打进安装包
 [tool.setuptools.exclude-package-data]

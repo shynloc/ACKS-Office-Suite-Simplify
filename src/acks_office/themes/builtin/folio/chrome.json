@@ -1,0 +1,10 @@
+{
+  "schema": "acks-office-chrome/1",
+  "doc": {
+    "header": {"left": "{publication} · 第 {issue} 期", "right": "{chapter}"},
+    "footer": {"left": "{publication}", "right": "{page}"}
+  },
+  "slide": {
+    "footer": {"left": "{publication} · 第 {issue} 期", "right": "{page}"}
+  }
+}

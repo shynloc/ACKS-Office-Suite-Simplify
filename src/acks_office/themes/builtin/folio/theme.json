@@ -1,0 +1,9 @@
+{
+  "schema": "acks-office-theme/1",
+  "name": "folio",
+  "title": "Folio 对开",
+  "description": "杂志：强对比的字体搭配、大量留白、超大号数字和不对称版面；朱砂只点在最要紧的地方，靛青用于章节页。",
+  "version": "1.0.0",
+  "author": "ACKS Studio",
+  "license": "MIT"
+}
