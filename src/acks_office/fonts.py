@@ -98,6 +98,7 @@ class FontFace:
     italic: bool
     truetype: bool  # glyf 轮廓才能被 reportlab 嵌入；CFF 轮廓不能
     variable: bool
+    localized: Tuple[Tuple[str, str], ...] = ()  # (语言, 家族名)：("en", "PingFang SC")、("zh-Hans", "苹方-简")
 
 
 def _u16(data: bytes, offset: int) -> int:
@@ -108,9 +109,16 @@ def _u32(data: bytes, offset: int) -> int:
     return int.from_bytes(data[offset:offset + 4], "big")
 
 
-def _name_strings(table: bytes, wanted: Tuple[int, ...]) -> Dict[int, List[str]]:
-    """name 表里指定编号的全部字符串（各语言都收），英文排在前面。"""
-    found: Dict[int, List[Tuple[int, str]]] = {i: [] for i in wanted}
+_CONTROL = re.compile(r"[\x00-\x1f\x7f\ufffe\uffff\ud800-\udfff]")
+# name 表的语言编号 → 语言标签（只关心中日韩的本地化家族名）
+_WIN_LANGS = {0x0804: "zh-Hans", 0x1004: "zh-Hans", 0x0404: "zh-Hant", 0x0C04: "zh-Hant", 0x1404: "zh-Hant",
+              0x0411: "ja", 0x0412: "ko"}
+_MAC_LANGS = {33: "zh-Hans", 19: "zh-Hant", 11: "ja", 23: "ko"}
+
+
+def _name_strings(table: bytes, wanted: Tuple[int, ...]) -> Dict[int, List[Tuple[str, str]]]:
+    """name 表里指定编号的全部字符串 [(语言标签, 文字)]，英文排在前面；语言不关心时标签为空。"""
+    found: Dict[int, List[Tuple[int, str, str]]] = {i: [] for i in wanted}
     count, base = _u16(table, 2), _u16(table, 4)
     for i in range(count):
         rec = 6 + 12 * i
@@ -125,10 +133,14 @@ def _name_strings(table: bytes, wanted: Tuple[int, ...]) -> Dict[int, List[str]]
             text = raw.decode("mac_roman", "ignore")
         else:
             continue
+        text = _CONTROL.sub("", text)  # 有些字体的名称记录里混有 NUL 等控制字符
         english = (platform == 3 and language == 0x409) or (platform == 1 and language == 0)
+        tag = "en" if english else (_WIN_LANGS.get(language, "") if platform == 3
+                                     else _MAC_LANGS.get(language, "") if platform == 1 else "")
         if text.strip():
-            found[name_id].append((0 if english else 1, text.strip()))
-    return {k: list(dict.fromkeys(t for _, t in sorted(v))) for k, v in found.items()}
+            found[name_id].append((0 if english else 1, tag, text.strip()))
+    return {k: list(dict.fromkeys((tag, t) for _, tag, t in sorted(v, key=lambda x: x[0])))
+            for k, v in found.items()}
 
 
 def _read_face(f, offset: int, path: str, index: int) -> Optional[FontFace]:
@@ -150,12 +162,14 @@ def _read_face(f, offset: int, path: str, index: int) -> Optional[FontFace]:
         os2 = f.read(64)
         if len(os2) >= 64:
             weight, italic = _u16(os2, 4), bool(_u16(os2, 62) & 1)
-    families = tuple(dict.fromkeys(names[16] + names[1]))
+    family_names = names[16] + names[1]
+    families = tuple(dict.fromkeys(t for _, t in family_names))
     if not families:
         return None
-    style = (names[17] or names[2] or ["Regular"])[0]
+    localized = tuple(dict.fromkeys((tag, t) for tag, t in family_names if tag))
+    style = (names[17] or names[2] or [("", "Regular")])[0][1]
     return FontFace(path, index, families, style, weight, italic or "italic" in style.lower(),
-                    b"glyf" in tables, b"fvar" in tables)
+                    b"glyf" in tables, b"fvar" in tables, localized)
 
 
 def read_font_faces(path: str) -> List[FontFace]:
@@ -174,7 +188,7 @@ def read_font_faces(path: str) -> List[FontFace]:
 
 
 _FACES: Optional[List[FontFace]] = None
-_CACHE_VERSION = 1
+_CACHE_VERSION = 4
 
 
 def _cache_path() -> Path:
@@ -205,7 +219,8 @@ def font_faces(refresh: bool = False, write_cache: bool = True) -> List[FontFace
         stamp = [stat.st_size, int(stat.st_mtime)]
         hit = cached.get("files", {}).get(str(path))
         if hit and hit["stamp"] == stamp:
-            found = [FontFace(**dict(f, families=tuple(f["families"]))) for f in hit["faces"]]
+            found = [FontFace(**dict(f, families=tuple(f["families"]),
+                                     localized=tuple(tuple(x) for x in f["localized"]))) for f in hit["faces"]]
         else:
             found, changed = read_font_faces(str(path)), True
         entries[str(path)] = {"stamp": stamp, "faces": [asdict(f) for f in found]}
@@ -318,6 +333,47 @@ def common_hanzi() -> List[str]:
             except UnicodeDecodeError:
                 continue
     return chars
+
+
+def mac_ui_language() -> str:
+    """macOS 的首选语言（如 zh-Hans-CN）；读不到或不是 macOS 时返回空字符串。"""
+    if sys.platform != "darwin":
+        return ""
+    try:
+        import plistlib
+        with open(Path.home() / "Library" / "Preferences" / ".GlobalPreferences.plist", "rb") as f:
+            languages = plistlib.load(f).get("AppleLanguages") or []
+        return str(languages[0]) if languages else ""
+    except Exception:
+        return ""
+
+
+def _language_tag(ui_language: str) -> str:
+    lang = ui_language.lower()
+    if lang.startswith(("zh-hant", "zh-tw", "zh-hk", "zh-mo")):
+        return "zh-Hant"
+    if lang.startswith("zh"):
+        return "zh-Hans"
+    return {"ja": "ja", "ko": "ko"}.get(lang[:2], "")
+
+
+def localized_family_names(ui_language: Optional[str] = None) -> Dict[str, str]:
+    """英文家族名 → 当前系统语言下的本地化家族名（如 PingFang SC → 苹方-简）。
+
+    macOS 上的 LibreOffice 只认本地化后的名字，转换前用它生成字体替换表。
+    """
+    tag = _language_tag(mac_ui_language() if ui_language is None else ui_language)
+    if not tag:
+        return {}
+    pairs: Dict[str, str] = {}
+    for face in font_faces(write_cache=False):
+        local = next((name for lang, name in face.localized if lang == tag), None)
+        if not local:
+            continue
+        for lang, name in face.localized:
+            if lang == "en" and name.isascii() and name != local and name not in pairs:
+                pairs[name] = local
+    return pairs
 
 
 def _norm(name: str) -> str:

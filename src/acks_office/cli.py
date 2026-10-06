@@ -12,7 +12,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
 
@@ -87,12 +87,18 @@ def _load_table(file: str) -> List[List[Any]]:
     return data
 
 
-def _load_slides(file: str) -> List[Dict[str, Any]]:
+def _load_slides(file: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """幻灯片 JSON：数组，或 {"meta": {...}, "slides": [...]}（meta 为整套的元数据）。"""
     data = _load_json(file)
-    if not (isinstance(data, list) and data and all(isinstance(s, dict) for s in data)):
-        raise CliError("INVALID_INPUT", "幻灯片需要是非空 JSON 数组，例如 "
+    meta: Dict[str, Any] = {}
+    if isinstance(data, dict):
+        meta = data.get("meta") or {}
+        data = data.get("slides")
+    if not (isinstance(data, list) and data and all(isinstance(s, dict) for s in data)
+            and isinstance(meta, dict)):
+        raise CliError("INVALID_INPUT", "幻灯片需要是非空 JSON 数组，或 {\"meta\": {...}, \"slides\": [...]}，例如 "
                                         "[{\"title\": \"封面\", \"layout\": \"title\"}, {\"title\": \"要点\", \"content\": \"…\"}]")
-    return data
+    return data, meta
 
 
 def _suite(theme: str):
@@ -168,7 +174,12 @@ def cmd_create(args) -> Dict:
     elif kind == "pptx":
         if not args.slides_file:
             raise CliError("INVALID_INPUT", "生成 PPT 需要 --slides-file（JSON 数组，每项含 title、content、layout）")
-        kwargs["slides"] = _load_slides(args.slides_file)
+        kwargs["slides"], deck_meta = _load_slides(args.slides_file)
+        for key, value in deck_meta.items():
+            if key == "title" and title is None:
+                title = value
+            elif key != "title":
+                kwargs.setdefault(key, value)
 
     kwargs["title"] = title or kwargs.get("title") or Path(args.output).stem
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)

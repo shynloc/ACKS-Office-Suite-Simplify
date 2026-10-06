@@ -12,24 +12,38 @@ TRANSITIONS = ("fade", "push", "wipe", "split", "cover", "pull", "dissolve", "cu
 
 
 def create_pptx(title: str, slides: List[Dict[str, Any]], output_path: str,
-                theme: str = "acks",
-                brand_name: str = DEFAULT_BRAND,
+                theme: Any = "acks",
+                brand_name: Optional[str] = None,
                 **kwargs) -> Dict[str, Any]:
     """
     创建 PowerPoint 演示文稿。
 
     Args:
         title: 演示文稿标题
-        slides: 幻灯片列表，每个字典包含 title, content, layout（title / content），可选 subtitle
+        slides: 幻灯片列表。每页一个字典，layout 为 title（封面）、section（章节页）、content（内容页，
+            content 或 bullets）、data（关键数字 kpis + 条形图 chart）、table（表格）、number（大数字）、
+            quote（引文）、image（图片），其余字段见命令参考；acks / default 只认 title 与 content
         output_path: 输出路径
-        theme: "acks"（符合 ACKS 设计规范，默认）或 "default"（简单样式）
-        brand_name: 品牌名（theme="acks" 生效）：显示在品牌行和内容页眉题，传 "" 去品牌化
-        footer_label: 页脚文字（theme="acks" 生效），默认随品牌自动生成
+        theme: 主题名称（neutral、slate、folio 或已安装的主题）、主题目录或 Theme 对象；
+            "acks"、"default" 是 2.x 的内置样式
+        brand_name: 品牌名，传 "" 去品牌化
+        footer_label: 页脚左侧文字，默认按主题模板生成
         meta_right: 标题页右上角文字（theme="acks" 生效）
+        其余关键字参数（kicker、classification、publication、issue、season、date、author 等）作为元数据
     """
-    if theme == "acks":
-        return _create_pptx_acks(title, slides, output_path, brand_name, **kwargs)
-    return _create_pptx_default(title, slides, output_path, **kwargs)
+    if isinstance(theme, str) and theme in ("acks", "default"):
+        brand = DEFAULT_BRAND if brand_name is None else brand_name
+        if theme == "acks":
+            return _create_pptx_acks(title, slides, output_path, brand, **kwargs)
+        return _create_pptx_default(title, slides, output_path, **kwargs)
+    from .render.slides import render_slides
+    options = ("base_dir", "font_policy", "footer_label")
+    meta = {k: v for k, v in kwargs.items() if k not in options}
+    if brand_name is not None:
+        meta["brand"] = brand_name
+    return render_slides(title, slides, output_path, theme=theme, base_dir=kwargs.get("base_dir"),
+                         font_policy=kwargs.get("font_policy", "local"), footer_label=kwargs.get("footer_label"),
+                         **meta)
 
 
 def _create_pptx_acks(title: str, slides: List[Dict[str, Any]], output_path: str,
