@@ -270,13 +270,28 @@ def cmd_merge(args) -> Dict:
 def cmd_fonts(args) -> Dict:
     from . import fonts
     if args.action == "install":
-        if not args.name:
-            raise CliError("INVALID_INPUT", f"请指定字体，可选：{', '.join(fonts.CATALOG)}")
-        try:
-            data = fonts.install_font(args.name, progress=lambda msg: print(msg, file=sys.stderr))
-        except (ValueError, RuntimeError) as exc:
-            raise CliError("FONT_INSTALL_FAILED", str(exc)) from None
-        return _envelope(True, data, [_artifact(f) for f in data["files"]])
+        if args.theme:
+            from .themes import load_theme
+            load_theme(args.theme)  # 主题不存在时报 THEME_NOT_FOUND
+            keys = fonts.theme_font_status(args.theme)["install"]
+            if args.name:
+                keys = [k for k in keys if k == args.name] or [args.name]
+        elif args.name:
+            keys = [args.name]
+        else:
+            raise CliError("INVALID_INPUT", f"请指定字体（{', '.join(fonts.CATALOG)}）或 --theme 主题",
+                           "例如 fonts install noto-sans-sc，或 fonts install --theme folio --system")
+        installed, artifacts = [], []
+        for key in keys:
+            try:
+                data = fonts.install_font(key, progress=lambda msg: print(msg, file=sys.stderr), system=args.system)
+            except (ValueError, RuntimeError, OSError) as exc:
+                raise CliError("FONT_INSTALL_FAILED", f"{key}：{exc}") from None
+            installed.append(data)
+            artifacts += [_artifact(f) for f in data["files"]]
+        if len(installed) == 1 and not args.theme:
+            return _envelope(True, installed[0], artifacts)
+        return _envelope(True, {"theme": args.theme, "installed": installed}, artifacts)
     return _envelope(True, fonts.fonts_report())
 
 
@@ -382,6 +397,9 @@ def _parser() -> argparse.ArgumentParser:
     p = sub.add_parser("fonts", parents=[common], help="查看字体情况或安装开源字体")
     p.add_argument("action", choices=["list", "install"])
     p.add_argument("name", nargs="?", help="要安装的字体，如 noto-sans-sc")
+    p.add_argument("--theme", help="安装某个主题缺少的全部字体，如 --theme folio")
+    p.add_argument("--system", action="store_true",
+                   help="同时装到当前用户的字体目录，Word、PowerPoint 等软件也能用（不需要管理员权限）")
     p.set_defaults(func=cmd_fonts)
     return parser
 
