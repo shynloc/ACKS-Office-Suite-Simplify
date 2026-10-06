@@ -40,6 +40,7 @@ NEVER edit token values without updating tokens.json and running:
 """
 
 from __future__ import annotations
+import weakref
 from typing import Mapping, Optional, Sequence, TypedDict
 
 from pptx import Presentation
@@ -53,7 +54,7 @@ from pptx.util import Inches, Pt, Emu
 from .slides_constants import *  # noqa: F401,F403
 
 __all__ = [
-    "init_presentation", "finalize_footers", "fit_title_size", "fit_paragraph_size",
+    "init_presentation", "set_brand", "finalize_footers", "fit_title_size", "fit_paragraph_size",
     "add_title_slide", "add_section_slide", "add_content_slide",
     "add_data_slide", "add_compare_slide", "add_quote_slide",
     "add_closing_slide",
@@ -294,6 +295,13 @@ def _measure_width_in(text: str, size_pt: float, font: str) -> Optional[float]:
     return width_em * size_pt / 72.0
 
 
+def _title_head(title_top: str, title_em: str) -> str:
+    """First run of a two-part display title. The joining space is only
+    added when both parts have text — CJK titles usually fill title_em
+    alone, and a leading space would visibly shift them right."""
+    return f"{title_top} " if title_top and title_em else title_top
+
+
 def fit_title_size(text: str, box_width_in: float, base_pt: float,
                    min_pt: float, *, font: str = FONT_DISPLAY_EN,
                    step: float = 2.0) -> float:
@@ -356,22 +364,45 @@ def fit_paragraph_size(text: str, box_width_in: float, box_height_in: float,
 #                    CHROME (brand row + footer)
 # =============================================================
 
+DEFAULT_BRAND = "ACKS Studio"
+_DEFAULT_FOOTER = "ACKS Studio · v2.1 · 2026"
+_BRANDS: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
+def set_brand(prs: Presentation, *, name: str = DEFAULT_BRAND,
+              footer_label: Optional[str] = None) -> None:
+    """设置这份演示文稿的品牌行与页脚文字（acks_office 本地改动）。
+
+    name 为默认值时保持原样（ACKS STUDIO · 爱驰科驶）；传 "" 不显示品牌；
+    其他值显示为自定义品牌。footer_label 不传时：默认品牌沿用原页脚，
+    自定义品牌显示品牌名，去品牌时不显示页脚文字（页码保留）。
+    """
+    _BRANDS[prs.part.package] = (name, footer_label)
+
+
+def _brand_of(slide):
+    return _BRANDS.get(slide.part.package, (DEFAULT_BRAND, None))
+
+
 def _add_brand_row(slide, meta_right: Optional[str] = None,
                    on_dark: bool = False):
     ink = RGB_TEXT_DARK_1 if on_dark else RGB_TEXT_PRIMARY
     sub = RGB_TEXT_DARK_3 if on_dark else RGB_TEXT_TERTIARY
-    _add_text(
-        slide,
-        SLIDE_MARGIN, Inches(0.4), Inches(6), Inches(0.3),
-        [
+    brand, _ = _brand_of(slide)
+    if brand == DEFAULT_BRAND:
+        runs = [
             ("ACKS STUDIO ", {"font": FONT_DISPLAY_EN, "size": Pt(18),
                               "bold": True, "color": ink}),
             ("· ", {"font": FONT_DISPLAY_EN, "size": Pt(18),
                     "bold": True, "color": RGB_PRIMARY}),
             ("爱驰科驶", {"font": FONT_BODY_CN, "font_cn": FONT_BODY_CN,
                           "size": Pt(18), "bold": True, "color": ink}),
-        ],
-    )
+        ]
+    else:
+        runs = [(brand, {"font": FONT_DISPLAY_EN, "font_cn": FONT_BODY_CN,
+                         "size": Pt(18), "bold": True, "color": ink})] if brand else []
+    if runs:
+        _add_text(slide, SLIDE_MARGIN, Inches(0.4), Inches(6), Inches(0.3), runs)
     if meta_right:
         _add_text(
             slide,
@@ -398,13 +429,17 @@ def _add_footer(slide, page_no: Optional[int] = None,
     ink = RGB_TEXT_DARK_1 if on_dark else RGB_TEXT_PRIMARY
     sub = RGB_TEXT_DARK_3 if on_dark else RGB_TEXT_TERTIARY
     y = SLIDE_HEIGHT - Inches(0.7)
-    _add_text(
-        slide,
-        SLIDE_MARGIN, y, Inches(5), Inches(0.3),
-        "ACKS Studio · v2.1 · 2026",
-        font=FONT_MONO, font_cn=FONT_MONO,
-        size=SIZE_FOOTER, color=sub, caps=True,
-    )
+    brand, label = _brand_of(slide)
+    if label is None:
+        label = _DEFAULT_FOOTER if brand == DEFAULT_BRAND else brand
+    if label:
+        _add_text(
+            slide,
+            SLIDE_MARGIN, y, Inches(5), Inches(0.3),
+            label,
+            font=FONT_MONO, font_cn=FONT_MONO,
+            size=SIZE_FOOTER, color=sub, caps=True,
+        )
     if page_no:
         sq = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
@@ -486,14 +521,14 @@ def add_title_slide(prs, *, doctype: str, title_top: str, title_em: str,
     # hypothetical box (slide width minus margins) while the real
     # textbox was narrower, so "fits" was measured against a box that
     # didn't exist and the title still wrapped.
-    size = fit_title_size(f"{title_top} {title_em}", title_box_w / Inches(1),
+    size = fit_title_size(_title_head(title_top, title_em) + title_em, title_box_w / Inches(1),
                           base_pt=92, min_pt=52)
     _add_text(s, SLIDE_MARGIN, Inches(3.5), Inches(11), Inches(0.4),
               f"— {doctype.upper()}",
               font=FONT_MONO, size=Pt(20), color=RGB_PRIMARY, caps=True)
     _add_text(s, SLIDE_MARGIN, Inches(3.95), title_box_w, Inches(1.5),
               [
-                  (f"{title_top} ", {"font": FONT_DISPLAY_EN, "size": Pt(size),
+                  (_title_head(title_top, title_em), {"font": FONT_DISPLAY_EN, "size": Pt(size),
                                      "bold": True, "color": RGB_TEXT_DARK_1}),
                   (title_em, {"font": FONT_DISPLAY_EN, "size": Pt(size),
                               "bold": True, "color": RGB_PRIMARY}),
@@ -530,10 +565,10 @@ def add_section_slide(prs, *, n: str, title_top: str, title_em: str,
               n.upper(), font=FONT_MONO, size=Pt(20),
               color=RGB_PRIMARY, caps=True)
     title_color = RGB_TEXT_DARK_1 if on_dark else RGB_TEXT_PRIMARY
-    size = fit_title_size(f"{title_top} {title_em}", 11.6, base_pt=120, min_pt=64)
+    size = fit_title_size(_title_head(title_top, title_em) + title_em, 11.6, base_pt=120, min_pt=64)
     _add_text(s, SLIDE_MARGIN, Inches(2.9), Inches(12), Inches(1.9),
               [
-                  (f"{title_top} ", {"font": FONT_DISPLAY_EN, "size": Pt(size),
+                  (_title_head(title_top, title_em), {"font": FONT_DISPLAY_EN, "size": Pt(size),
                                      "bold": True, "color": title_color}),
                   (title_em, {"font": FONT_DISPLAY_EN, "size": Pt(size),
                               "bold": True, "color": RGB_PRIMARY}),
@@ -835,10 +870,10 @@ def add_closing_slide(prs, *, title_top: str, title_em: str,
     s = _blank_slide(prs)
     _add_brand_row(s, "THANK YOU · 2026")
 
-    size = fit_title_size(f"{title_top} {title_em}", 11.4, base_pt=96, min_pt=56)
+    size = fit_title_size(_title_head(title_top, title_em) + title_em, 11.4, base_pt=96, min_pt=56)
     _add_text(s, SLIDE_MARGIN, Inches(3.4), Inches(11.6), Inches(1.75),
               [
-                  (f"{title_top} ", {"font": FONT_DISPLAY_EN, "size": Pt(size),
+                  (_title_head(title_top, title_em), {"font": FONT_DISPLAY_EN, "size": Pt(size),
                                      "bold": True, "color": RGB_TEXT_PRIMARY}),
                   (title_em, {"font": FONT_DISPLAY_EN, "size": Pt(size),
                               "bold": True, "color": RGB_PRIMARY}),

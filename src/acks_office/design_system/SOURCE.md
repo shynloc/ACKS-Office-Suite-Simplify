@@ -36,7 +36,11 @@
   以适配 Python 包结构 `acks_office.design_system`。
 - `tests/` 相应改为经由包路径导入（`from tokens import ...` → `from acks_office.design_system.tokens import ...`），
   `tests/conftest.py` 改为把 `src/` 加入 `sys.path`。
+- `slides.py` 新增 `set_brand()`：品牌行与页脚文字按演示文稿设置，默认仍是「ACKS STUDIO · 爱驰科驶」；
+  传空字符串去掉品牌，传其他值显示自定义品牌。
 - `acks/__main__.py` 的 import 同样改为包内相对 import（`from tokens import` → `from ..tokens import`）。
+- `slides.py` 新增 `_title_head()`：封面 / 章节 / 结尾页的两段式大标题只在两段都有内容时才加空格，
+  中文标题（只填 `title_em`）不再多出前导空格。
 
 ## 同步策略
 
