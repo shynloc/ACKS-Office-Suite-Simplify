@@ -70,7 +70,10 @@ def test_transitions_are_written_once_per_slide(deck, tmp_path):
     src, out = deck(), tmp_path / "fade.pptx"
     result = add_transition_effects(str(src), str(out), effect="push", duration=1.5)
     assert result == {"output_path": str(out), "slides": 4, "effect": "push"}
-    add_transition_effects(str(out), effect="fade", duration=0.3)  # 再设一次会替换，不会叠加
+    add_transition_effects(str(out), str(out), effect="fade", duration=0.3)  # 再设一次会替换，不会叠加
+    before = src.read_bytes()
+    default = add_transition_effects(str(src), effect="wipe")  # 3.0：默认写到新文件，不改原文件
+    assert default["output_path"] == str(src.with_name("deck_transitions.pptx")) and src.read_bytes() == before
 
     for found in _transitions(out):
         (transition,) = found

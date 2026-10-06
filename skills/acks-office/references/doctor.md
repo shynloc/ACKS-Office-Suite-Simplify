@@ -11,7 +11,8 @@
 | `python` | 版本、路径、是否满足最低版本、是否在虚拟环境、是否受系统保护（PEP 668） |
 | `dependencies` | 每个依赖的版本要求、已装版本、能否导入 |
 | `fonts.pdf_cjk` | PDF 将使用的中文字体：`family`、`embedded`（是否嵌入 PDF）、`source`（`argument` / `env` / `installed` / `system` / `builtin`） |
-| `fonts.theme` | 主题字体 `present` / `missing` |
+| `fonts.theme` | 默认主题（neutral）的字体：`present` 已安装、`substituted` 用备选字体替代、`missing` 都没装、`install` 可下载的字体键 |
+| `fonts.themes` | 各内置主题的字体情况，字段同上 |
 | `office_apps` | 第一项是 LibreOffice（`path`、`callable`、`version`）；其后是 Word、PowerPoint、Excel、WPS、Keynote 等，只报告是否安装，`callable` 为 `optional_engine_disabled`（2.x 不调用它们） |
 | `agents` | 本机发现的 Agent 及其技能目录 |
 | `network` | `pypi`、`github` 是否可达（`--no-network` 时为 null） |
@@ -23,8 +24,8 @@
 | 等级 | 条件 | 能做什么 |
 |---|---|---|
 | `none` | Python 版本不够或缺依赖 | 只能运行 doctor |
-| `L0` | 依赖齐全 | 生成、读取全部格式；PDF 中文可能未嵌入，或 Word/PPT 主题字体缺失 |
-| `L1` | L0 + PDF 中文字体可嵌入 + 主题字体齐全 | 满足字体检测条件；最终显示仍由打开文件的软件决定 |
+| `L0` | 依赖齐全 | 生成、读取全部格式；PDF 中文可能未嵌入，或默认主题的字体缺失 |
+| `L1` | L0 + PDF 中文字体可嵌入 + 默认主题的字体（或其备选）都在 | 满足字体检测条件；最终显示仍由打开文件的软件决定 |
 | `L2` | L1 + LibreOffice 可调用 | 另可格式转换（如 docx → pdf） |
 
 ## 补齐计划
@@ -39,10 +40,10 @@
 
 | id | 何时出现 | 内容 |
 |---|---|---|
-| `upgrade_python` | Python 低于 3.9 | 请用户自行安装新版 Python |
+| `upgrade_python` | Python 低于 3.10 | 请用户自行安装新版 Python |
 | `install_dependencies` | 缺依赖 | 经技能运行时：建专用虚拟环境并装依赖，入口脚本之后自动使用它；直接用命令行时：装进当前 Python |
 | `install_cjk_font` | PDF 中文字体不能嵌入 | 安装 fonttools（如缺）并下载 Noto Sans SC（SIL OFL 1.1，可免费商用） |
-| `install_theme_fonts` | 主题字体缺失 | 给出 Google Fonts 链接，安装到系统需用户同意 |
+| `install_theme_fonts` | 内置主题有可下载的字体没装（可选） | 每个主题一条 `fonts install --theme <主题> --system`；只在用户要用该主题时提出 |
 | `install_libreoffice` | 没有可用的 LibreOffice（可选） | 按系统给出 brew / winget / choco / scoop / apt / dnf / pacman 命令 |
 
 入口脚本找不到程序本体时会直接返回 `error.code = PACKAGE_MISSING`，`data.plan` 里是

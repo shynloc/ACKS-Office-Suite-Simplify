@@ -5,7 +5,7 @@
     rows = acks_office.extract("数据.xlsx")
 """
 
-__version__ = "2.1.2"
+__version__ = "3.0.0"
 __author__ = "Thom Jing (shynloc)"
 
 __all__ = ["create", "extract", "convert", "add_watermark", "merge", "OfficeSuite"]

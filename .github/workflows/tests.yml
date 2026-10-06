@@ -34,6 +34,8 @@ jobs:
         run: |
           acks-office doctor --json --no-network
           acks-office create pdf -o smoke.pdf --title "冒烟测试" --content "中文 **粗体** 与表格" --json
+          acks-office create word -o smoke.docx --content "# 标题 {label=\"一 · ONE\"}" --theme folio --json
+          acks-office theme validate slate --no-fonts --json
           python skills/acks-office/scripts/acks.py extract smoke.pdf --json
 
   bundle:
@@ -50,6 +52,15 @@ jobs:
           python -m pip install build
           python -m build
           python tools/build_skill_bundle.py --out dist
+      - name: Wheel ships the built-in themes
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          for theme in ("_base", "neutral", "slate", "folio"):
+              assert any(n.endswith(f"themes/builtin/{theme}/theme.json") for n in names), theme
+          assert any(n.endswith("themes/builtin/_base/tokens.json") for n in names)
+          PY
       - uses: actions/upload-artifact@v7
         with:
           name: dist

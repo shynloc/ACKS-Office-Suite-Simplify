@@ -1,25 +1,26 @@
 ---
 name: acks-office
 description: >-
-  Create, read and convert Word (.docx), Excel (.xlsx), PowerPoint (.pptx) and PDF files with a
-  consistent document design system, without needing Microsoft Office or WPS installed (works on
+  Create, read and convert Word (.docx), Excel (.xlsx), PowerPoint (.pptx) and PDF files with
+  built-in or custom design themes, without needing Microsoft Office or WPS installed (works on
   macOS, Windows and Linux). Use when the user asks to write or export a report, proposal, memo,
   slide deck, spreadsheet or PDF; to pull text or tables out of office files; to convert between
-  formats; or to watermark or merge documents. 生成、读取、转换 Word / Excel / PPT / PDF，按文档设计规范排版，
-  不依赖本机 Office；用于写报告、方案、汇报 PPT、表格、PDF，提取文档内容，格式转换，加水印，合并文档。
+  formats; to watermark or merge documents; or to set up a brand theme. 生成、读取、转换 Word / Excel /
+  PPT / PDF，按内置或自定义主题排版，不依赖本机 Office；用于写报告、方案、汇报 PPT、表格、PDF，
+  提取文档内容，格式转换，加水印，合并文档，定制品牌主题。
 license: MIT
 compatibility: >-
-  Needs Python 3.9+. Python packages are installed on first use into a private virtual environment,
+  Needs Python 3.10+. Python packages are installed on first use into a private virtual environment,
   only after the user agrees. LibreOffice is optional (format conversion only).
 metadata:
-  version: "2.1.2"
+  version: "3.0.0"
   author: "ACKS Studio"
   homepage: "https://github.com/shynloc/ACKS-Office-Suite-Simplify"
 ---
 
 # acks-office
 
-用一套命令生成符合设计规范的 Word / Excel / PPT / PDF，也能读取、转换、加水印、合并。
+用一套命令按主题生成 Word / Excel / PPT / PDF，也能读取、转换、加水印、合并，还能为用户定制主题。
 所有文件都由 Python 直接写出，**不需要用户装 Office**。
 
 入口脚本：`scripts/acks.py`（下文的 `ACKS` 指 `python3 <本技能目录>/scripts/acks.py`；
@@ -33,12 +34,12 @@ Windows 上把 `python3` 换成 `python` 或 `py -3`）。命令一律加 `--jso
 python3 <本技能目录>/scripts/acks.py doctor --json
 ```
 
-- 找不到 Python：告诉用户需要 Python 3.9 以上，给出 https://www.python.org/downloads/ ，
+- 找不到 Python：告诉用户需要 Python 3.10 以上，给出 https://www.python.org/downloads/ ，
   问用户是否要安装；**不要自行安装**。
 - 结果里 `error.code` 为 `PACKAGE_MISSING`：说明要安装程序本体，见下面「补齐」。
 - 正常时看 `data.level`：
   - `none`：缺依赖，还不能生成文档，先补齐；
-  - `L0`：能生成全部格式，但缺字体（PDF 中文可能不嵌入，或 Word/PPT 主题字体会被替换）；
+  - `L0`：能生成全部格式，但缺字体（PDF 中文可能不嵌入，或默认主题的字体会被替换）；
   - `L1`：字体齐全，排版与设计一致；
   - `L2`：另有 LibreOffice，可做格式转换。
 - 只为当前任务需要的项补齐。例如用户只要 Word，就不必提 LibreOffice。
@@ -62,24 +63,27 @@ python3 <本技能目录>/scripts/acks.py doctor --json
 
 | 任务 | 命令 |
 |---|---|
-| Word | `ACKS create word -o 报告.docx --title "标题" --content-file 正文.md --json` |
-| PDF | `ACKS create pdf -o 报告.pdf --title "标题" --content-file 正文.md --json` |
-| PPT | `ACKS create pptx -o 汇报.pptx --slides-file slides.json --json` |
-| Excel | `ACKS create excel -o 数据.xlsx --data-file data.csv --json` |
+| Word | `ACKS create word -o 报告.docx --content-file 正文.md --theme slate --json` |
+| PDF | `ACKS create pdf -o 报告.pdf --content-file 正文.md --theme slate --json` |
+| PPT | `ACKS create pptx -o 汇报.pptx --slides-file slides.json --theme slate --json` |
+| Excel | `ACKS create excel -o 数据.xlsx --data-file data.json --theme slate --json` |
 | 读取 | `ACKS extract 文件 --json`（Excel 加 `--sheet 名称或序号`） |
 | 转换 | `ACKS convert 文件 --to pdf --json`（需要 LibreOffice） |
 | 水印 | `ACKS watermark 文件.pdf --text "内部资料" --json` |
 | 合并 | `ACKS merge a.pdf b.pdf -o 合并.pdf --json`（全部 PDF 或全部 docx） |
-| 字体 | `ACKS fonts list --json` / `ACKS fonts install noto-sans-sc --json` |
+| 主题 | `ACKS theme list --json` / `ACKS theme preview slate --json` / `ACKS theme init 新主题 --extends slate --json` |
+| 字体 | `ACKS fonts list --json` / `ACKS fonts install --theme slate --system --json`（需用户同意） |
 
 - 正文写成 Markdown 文件再用 `--content-file`：支持标题、粗体、斜体、链接、列表、任务清单、
   表格、引用、`> [!NOTE]` 提示块、代码块、图片（相对正文文件所在目录）。详见
   [references/markdown.md](references/markdown.md)。
-- PPT 的 `slides.json`：`[{"title": "封面", "subtitle": "副标题", "layout": "title"},
-  {"title": "要点", "content": "第一行\n第二行"}]`。
-- 品牌：默认是 ACKS 参考主题。用户没有品牌时加 `--brand-name ""`（去掉品牌字样），有品牌时
-  `--brand-name "品牌名"`；页脚文字用 `--footer-label`。
-- 主题：`--theme acks`（默认，设计规范排版）或 `--theme default`（朴素样式）。
+- 正文开头可写 front matter（`title`、`subtitle`、`kicker`、`author`、`date`、`version` 等），
+  封面和页眉页脚会用到；也可用 `--meta 键=值`。
+- PPT 的 `slides.json`：`[{"layout": "title", "title": "封面", "subtitle": "副标题"},
+  {"title": "要点", "bullets": ["第一条", "第二条"]}]`；另有章节页、数据页（关键数字 + 图表）、表格页、
+  大数字页、引文页、图片页。Excel 可以是二维数组、对象数组或多张工作表。格式见 commands.md。
+- 主题：默认 `neutral`（只用系统字体）；`slate` 适合商务报告与汇报，`folio` 适合品牌手册、年报这类
+  杂志感的文档。用户没指定时按用途选，拿不准就用默认。品牌用 `--brand-name`（`""` 去掉品牌）。
 
 完整参数与错误码见 [references/commands.md](references/commands.md)。
 
@@ -87,21 +91,26 @@ python3 <本技能目录>/scripts/acks.py doctor --json
 
 输出统一为 `{"ok", "data", "artifacts", "warnings", "error"}`，退出码 0 成功、1 失败、2 参数错误。
 
-- 成功：把 `artifacts[].path` 告诉用户；`warnings` 里的内容要转告（例如 `FONT_FALLBACK`
-  表示 PDF 中文字体没有嵌入，可建议安装 noto-sans-sc）。
+- 成功：把 `artifacts[].path` 告诉用户；`warnings` 里的内容要转告：`FONT_SUBSTITUTED` 表示主题字体
+  没装、用了本机的备选字体（`install` 是可下载的字体键，征得同意后可 `fonts install`）；
+  `FONT_NOT_EMBEDDED` 表示 PDF 里的中文没能嵌入，换设备显示可能不同。
 - 失败：看 `error.code` 与 `error.hint`。`OUTPUT_EXISTS` 时先问用户是否覆盖，同意后再加
   `--overwrite`；`ENGINE_UNAVAILABLE` 表示需要 LibreOffice，按「补齐」处理或改为直接生成目标格式。
 - 不要覆盖用户已有文件，不要把文件写到用户没有指定的位置以外（未指定时放在当前工作目录）。
 
-## 设计规范
+## 主题与定制
 
-内置的 ACKS 主题是一套参照规范：配色、字体、版式都有明确的令牌（tokens）。用户想要自己的风格时，
-先用 `--brand-name`、`--footer-label` 做轻量定制；完整的「自定义主题」将在 3.0 提供，
-思路见 [references/design-system.md](references/design-system.md)。
+主题决定配色、字体、字号、版式与页眉页脚，Word、PDF、PPT、Excel 共用。用户想要自己的风格时：
+
+1. 问清品牌名、主色、字体偏好和使用场景；
+2. `theme init 名称 --extends 最接近的内置主题 --accent #色值 --brand 品牌` 新建主题，按
+   [references/design-system.md](references/design-system.md) 修改；
+3. `theme validate` 检查，`theme preview` 生成 HTML 样张给用户确认（HTML 可直接展示）；
+4. 确认后用 `--theme 名称` 出品。
 
 ## 参考
 
 - [references/commands.md](references/commands.md)：命令、参数、JSON 结构、错误码
 - [references/doctor.md](references/doctor.md)：环境报告各字段、能力等级、补齐计划
 - [references/markdown.md](references/markdown.md)：Markdown 在 Word / PDF 中的呈现
-- [references/design-system.md](references/design-system.md)：主题、品牌与自定义设计规范
+- [references/design-system.md](references/design-system.md)：主题、主题包格式与定制方法

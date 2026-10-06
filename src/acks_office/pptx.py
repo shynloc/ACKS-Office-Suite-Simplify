@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 from pptx import Presentation
 from pptx.oxml import parse_xml
@@ -93,12 +94,13 @@ def add_transition_effects(input_path: str, output_path: Optional[str] = None, e
     Args:
         effect: fade / push / wipe / split / cover / pull / dissolve / cut / zoom / random
         duration: 秒，映射为 PowerPoint 的快（≤0.5）/ 中（≤1）/ 慢 三档
-        output_path: 输出路径（默认覆盖输入）
+        output_path: 输出路径，默认为 <原名>_transitions.pptx，不覆盖原文件（要改原文件时显式传入原路径）
     """
     if effect not in TRANSITIONS:
         raise ValueError(f"不支持的切换效果：{effect}；可选：{', '.join(TRANSITIONS)}")
     if not output_path:
-        output_path = input_path
+        source = Path(input_path)
+        output_path = str(source.with_name(f"{source.stem}_transitions{source.suffix}"))
 
     speed = "fast" if duration <= 0.5 else "med" if duration <= 1.0 else "slow"
     prs = Presentation(input_path)

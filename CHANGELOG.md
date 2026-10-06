@@ -3,6 +3,48 @@
 格式参照 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.0.0] - 2026-10-07
+
+主题引擎：设计从写死的常量变成运行时加载的主题包，同一套引擎按主题出品 Word、PDF、PPT、Excel。
+升级说明见 [迁移指南](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v3.0.0/docs/migration-3.0.md)。
+
+### 不兼容变更
+
+- **默认主题改为 `neutral`**（中性、只用系统字体、不带品牌）。`theme="default"` 成为 `neutral` 的别名，
+  2.x 的「简单样式」随之移除；`theme="acks"` 暂时保留 2.x 的 ACKS 样式，只支持基础版式。
+- **函数式接口** `acks_office.create / extract / convert / add_watermark / merge`：出错时抛出异常，
+  不再返回 `{"success": False}`。`OfficeSuite` 与 `office_suite` 导入名保留到 4.0，使用时提示弃用。
+- **不覆盖原文件**：`add_watermark` 默认写到 `<原名>_watermarked.<扩展名>`，`add_transition_effects`
+  默认写到 `<原名>_transitions.pptx`；要改原文件时显式传入原路径。
+- **合并更严格**：任一输入文件不存在时报错（CLI 为 `FILE_NOT_FOUND`），不再跳过后只合并一部分。
+- Word 的结果不再返回估算的页数（PDF 仍返回实际页数）；PDF 结果的 `font` 改为 `fonts`（嵌入的字体家族）。
+- 最低 Python 版本升到 3.10。
+
+### 新增
+
+- **主题引擎**：主题包由 `theme.json`、`tokens.json`、`chrome.json`、`fonts.json` 组成，沿 `extends` 继承，
+  可放在用户主题目录、`ACKS_OFFICE_THEMES` 指定的目录或任意路径（`--theme 路径`）。
+  内置 `neutral`、`slate`（商务）、`folio`（杂志）三套主题，取值来自定稿样张。
+- **Word**：三种封面（标题块 / 独立封面 / 期刊封面与本期目录）、章节自动编号或章节页、正文分栏与首字下沉、
+  主题化的表格（表头与合计行变体）、提示块、引文、表题图题，页眉页脚来自主题模板。
+- **PDF** 由引擎直接排版，版式与 Word 一致，字体嵌入文件；中文排版补上行首禁则、拆分段落与两端对齐的处理。
+- **PPT**：封面、章节页、内容页、数据页（关键数字 + 条形图）、表格页、大数字页、引文页、图片页，
+  标题按实际字宽自动缩放，中西文分别设置字体，可加演讲者备注。
+- **Excel**：标题行、表头与合计行变体、千位分隔与负数色、重点单元格、说明行、多张工作表与图表；
+  数据可以是二维数组、对象数组或多张工作表的说明；读取时识别标题行。
+- **Markdown front matter** 与 `--meta 键=值`：副标题、作者、日期、版本、期号、导语等元数据；
+  标题可带 `{label="…"}`，表格前后的「表：…」作为表题。
+- **主题命令**：`theme list / show / validate / init / preview`。校验对比度、字体安装与授权、常用汉字覆盖；
+  `init` 生成继承内置主题的主题包；`preview` 生成 HTML 样张与四种格式的示例文件。
+- **字体**：主题用到的七款开源字体可下载（地址固定、校验哈希，可变字体生成静态字重并改好名称）；
+  `fonts install --theme <主题> [--system]` 安装主题缺的全部字体，`--system` 同时装到当前用户的字体目录。
+  缺主题字体时自动改用本机备选字体，并给出 `FONT_SUBSTITUTED` 提醒。
+- `fonts list` 与 `doctor` 按主题报告字体情况；doctor 计划给出可选的安装主题字体步骤。
+
+### 修复
+
+- 中文 macOS 上用 LibreOffice 转换时，中文字体被逐字替换成其他字体（例如手写体）。
+
 ## [2.1.2] - 2026-10-06
 
 ### 文档
@@ -113,6 +155,7 @@
 
 - 首个版本：Word、Excel、PPT、PDF 的生成、转换、水印与邮件发送。
 
+[3.0.0]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.1.2...v3.0.0
 [2.1.2]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.0.1...v2.1.0
