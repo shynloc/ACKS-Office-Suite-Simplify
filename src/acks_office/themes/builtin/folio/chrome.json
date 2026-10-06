@@ -1,5 +1,6 @@
 {
   "schema": "acks-office-chrome/1",
+  "labels": {"toc": "本期目录"},
   "doc": {
     "header": {"left": "{publication} · 第 {issue} 期", "right": "{chapter}"},
     "footer": {"left": "{publication}", "right": "{page}"}

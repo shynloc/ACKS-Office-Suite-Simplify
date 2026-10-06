@@ -14,6 +14,7 @@ VARIANTS = {
     "layout.doc.chapter": ("inline", "opener"),
     "layout.doc.callout": ("tint", "rule"),
     "layout.doc.quote": ("bar", "pull"),
+    "layout.doc.caption": ("plain", "accent"),
     "layout.doc.table.head": ("fill", "label"),
     "layout.doc.page.size": ("A4", "A5", "Letter"),
     "layout.slide.cover": ("simple", "split", "issue"),

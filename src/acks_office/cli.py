@@ -137,13 +137,25 @@ def cmd_create(args) -> Dict:
         raise CliError("INVALID_INPUT", f"输出文件应以 {suffix} 结尾：{args.output}",
                        f"例如 -o {Path(args.output).stem or '输出'}{suffix}")
     _check_output(args.output, args.overwrite)
-    kwargs: Dict[str, Any] = {"output_path": args.output, "title": args.title or Path(args.output).stem}
+    if args.theme not in ("acks", "default"):
+        from .themes import load_theme
+        load_theme(args.theme)  # 主题不存在时直接报 THEME_NOT_FOUND
+    kwargs: Dict[str, Any] = {"output_path": args.output, "font_policy": args.font_policy}
     for key in ("brand_name", "footer_label", "subtitle"):
         if getattr(args, key) is not None:
             kwargs[key] = getattr(args, key)
+    for item in args.meta or []:
+        key, sep, value = item.partition("=")
+        if not sep or not key.strip():
+            raise CliError("INVALID_INPUT", f"--meta 应写成 键=值：{item}", "例如 --meta author=经营分析部")
+        kwargs[key.strip()] = value.replace("\\n", "\n")
 
+    title = args.title
     if kind in ("word", "pdf"):
         kwargs["content"] = _read_text(args.content, args.content_file)
+        if title is None:
+            from .render.common import split_front_matter
+            title = split_front_matter(kwargs["content"])[0].get("title")
         if args.content_file and args.content_file != "-":
             kwargs["base_dir"] = str(Path(args.content_file).resolve().parent)
         if kind == "pdf" and args.font:
@@ -158,6 +170,7 @@ def cmd_create(args) -> Dict:
             raise CliError("INVALID_INPUT", "生成 PPT 需要 --slides-file（JSON 数组，每项含 title、content、layout）")
         kwargs["slides"] = _load_slides(args.slides_file)
 
+    kwargs["title"] = title or kwargs.get("title") or Path(args.output).stem
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     return _from_result(_suite(args.theme).create(kind, **kwargs), "CREATE_FAILED", args.output)
 
@@ -280,7 +293,12 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--content-file", help="正文 Markdown 文件，- 表示从标准输入读取")
     p.add_argument("--data-file", help="Excel 数据：JSON 二维数组或 CSV")
     p.add_argument("--slides-file", help="PPT 幻灯片：JSON 数组")
-    p.add_argument("--theme", default="acks", choices=["acks", "default"])
+    p.add_argument("--theme", default="acks",
+                   help="主题名称（neutral、slate、folio 或已安装的主题）或主题目录；acks、default 是 2.x 的内置样式")
+    p.add_argument("--meta", action="append", metavar="KEY=VALUE",
+                   help="文档元数据，可重复：kicker、author、date、version、issue、lede 等（也可写在正文 front matter）")
+    p.add_argument("--font-policy", default="local", choices=["local", "theme"],
+                   help="local：缺主题字体时改用本机字体；theme：总是写主题字体名")
     p.add_argument("--brand-name", help="品牌名，传空字符串去掉品牌")
     p.add_argument("--footer-label", help="页脚文字")
     p.add_argument("--subtitle", help="封面副标题（Word）")

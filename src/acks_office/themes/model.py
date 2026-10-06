@@ -35,6 +35,14 @@ class FontChoice:
     substitutions: List[Dict[str, str]] = field(default_factory=list)
 
 
+def one_line(text: str) -> str:
+    def join(match):
+        before, after = match.group(1), match.group(2)
+        both_cjk = all(ord(ch) > 0x2E7F for ch in (before, after))
+        return before + ("" if both_cjk else " ") + after
+    return re.sub(r"(\S)\s*\n\s*(\S)", join, text).strip()
+
+
 def render_template(template: str, values: Dict[str, Any]) -> List[Tuple[str, str]]:
     """把页眉页脚模板填成 [(kind, value)]：kind 为 "text" 或 "field"（page / pages）。
 
@@ -197,11 +205,14 @@ class Theme:
         return self.chrome_get(f"labels.{key}", key)
 
     def chrome_values(self, meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """模板可用的值：主题外壳里的默认品牌信息，被文档元数据覆盖。"""
+        """模板可用的值：主题外壳里的默认品牌信息，被文档元数据覆盖。
+
+        页眉页脚只有一行：值里的换行（如两行的封面标题）两侧都是中文时直接去掉，否则换成空格。
+        """
         values = {k: self.chrome.get(k, "") for k in ("brand", "classification", "publication")}
         for key, value in (meta or {}).items():
             if value is not None:
-                values[key] = value
+                values[key] = one_line(value) if isinstance(value, str) else value
         if not values.get("short_title"):
             values["short_title"] = values.get("title", "")
         return values

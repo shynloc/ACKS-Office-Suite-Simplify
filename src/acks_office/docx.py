@@ -26,30 +26,48 @@ def _is_cjk(text: str) -> bool:
     return any('一' <= ch <= '鿿' for ch in text)
 
 
-def create_word(title: str, content: str, output_path: str,
-                theme: str = "acks",
-                brand_name: str = DEFAULT_BRAND,
+LEGACY_THEMES = ("acks", "default")
+
+
+def create_word(title: Optional[str], content: str, output_path: str,
+                theme: Any = "acks",
+                brand_name: Optional[str] = None,
                 footer_label: Optional[str] = None,
                 **kwargs) -> Dict[str, Any]:
     """
     创建 Word 文档。
 
     Args:
-        title: 文档标题
-        content: 文档内容，Markdown：标题、粗体/斜体、链接、列表与任务清单、表格、引文与提示块、代码块、图片
+        title: 文档标题；为空时用正文 front matter 里的 title
+        content: 文档内容，Markdown：标题、粗体/斜体、链接、列表与任务清单、表格、引文与提示块、代码块、图片；
+            开头可以写 front matter（kicker、subtitle、author、date、version、issue、lede 等）
         output_path: 输出文件路径
-        theme: "acks"（符合 ACKS 设计规范，默认）或 "default"（简单样式）
-        brand_name: 封面品牌 stamp（theme="acks" 生效），传 "" 去品牌化
-        footer_label: 页脚 label，默认自动生成
-        subtitle: 封面副标题（theme="acks" 生效）
+        theme: 主题名称（neutral、slate、folio 或已安装的主题）、主题目录或 Theme 对象；
+            "acks"、"default" 是 2.x 的内置样式
+        brand_name: 品牌名，传 "" 去品牌化
+        footer_label: 页脚左侧文字，默认按主题模板生成
+        subtitle 等元数据: 见 front matter
         base_dir: 图片相对路径的基准目录，默认当前目录
+        font_policy: "local"（缺主题字体时改用本机字体，默认）或 "theme"（总是写主题字体名）
     """
-    blocks = mdb.parse(content)
-    base_dir = kwargs.get("base_dir") or os.getcwd()
-    if theme == "acks":
-        return _create_word_acks(title, blocks, output_path, brand_name, footer_label, base_dir,
-                                 kwargs.get("subtitle", ""))
-    return _create_word_default(title, blocks, output_path, base_dir)
+    if isinstance(theme, str) and theme in LEGACY_THEMES:
+        blocks = mdb.parse(content)
+        base_dir = kwargs.get("base_dir") or os.getcwd()
+        if theme == "acks":
+            brand = DEFAULT_BRAND if brand_name is None else brand_name
+            return _create_word_acks(title or "", blocks, output_path, brand, footer_label, base_dir,
+                                     kwargs.get("subtitle", ""))
+        return _create_word_default(title or "", blocks, output_path, base_dir)
+    from .render.common import META_KEYS
+    from .render.word import render_word
+    meta = {key: kwargs[key] for key in kwargs if key in META_KEYS or key not in _RENDER_OPTIONS}
+    if brand_name is not None:
+        meta["brand"] = brand_name
+    return render_word(title, content, output_path, theme=theme, base_dir=kwargs.get("base_dir"),
+                       font_policy=kwargs.get("font_policy", "local"), footer_label=footer_label, **meta)
+
+
+_RENDER_OPTIONS = ("base_dir", "font_policy", "theme", "create_chart", "font", "bold_font")
 
 
 def _footer_label(title: str, brand_name: str, footer_label: Optional[str]) -> str:
