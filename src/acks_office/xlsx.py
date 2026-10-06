@@ -5,7 +5,6 @@ from typing import Optional, Union, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.chart import BarChart, Reference
-from openpyxl.utils import get_column_letter
 import pandas as pd
 
 def create_excel(title: str, data: List[List[Any]], output_path: str,
