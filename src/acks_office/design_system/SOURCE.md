@@ -17,7 +17,8 @@
 | `tokens.json` | Token 单一信源（颜色/字体/间距/页面/slide/xlsx/glyph/content_limit） |
 | `tokens.py` / `slides.py` / `xlsx.py` | Word / PPT / Excel 代码生成模块 |
 | `tokens_constants.py` / `slides_constants.py` / `xlsx_constants.py` | 由 tokens.json 自动生成的常量 |
-| `acks/` | 设计系统 CLI 包（`python -m acks build/validate/tokens/fonts`） |
+| `acks/` | 设计系统 CLI 包（`python -m acks_office.design_system.acks build/validate/tokens/fonts`） |
+| `assets/logo-*.png` | 随包分发的参考 logo；当前文档生成模块不调用它们 |
 | `scripts/` | build_tokens.py（生成常量）/ validate.py（校验）/ download_fonts.py（字体下载） |
 | `tests/` | 设计系统测试（29 条用例） |
 
@@ -25,7 +26,6 @@
 
 - HTML 规范文档（`ACKS Studio 文档设计规范.html` 等）
 - `css/`、`js/`、`examples/`（HTML 示例模板）
-- `assets/logo-*.png`（品牌 logo，未被 acks_office 代码引用，保留在知识库）
 
 以上属于设计规范的知识库参考资料（给人查阅），非 acks_office 运行依赖，故不复制。
 

@@ -38,15 +38,17 @@ def main():
         """,
         output_path=report_path,
     )
-    print(f"✅ Word 报告已生成: {report_path}（主题: {result.get('theme')}）")
+    if not result.get("success"):
+        raise RuntimeError(result["error"])
+    print(f"Word 报告已生成: {report_path}（主题: {result.get('theme')}）")
 
     # 2. 转换为 PDF（走 LibreOffice；未安装则跳过）
     pdf_path = os.path.join(output_dir, "季度报告.pdf")
-    try:
-        converted = suite.convert(report_path, to="pdf", output_path=pdf_path)
-        print(f"✅ PDF 已生成: {converted.get('output_path')}")
-    except Exception as e:
-        print(f"⚠️ PDF 转换跳过（可能未安装 LibreOffice）: {e}")
+    converted = suite.convert(report_path, to="pdf", output_path=pdf_path)
+    if converted.get("success"):
+        print(f"PDF 已生成: {converted['output_path']}")
+    else:
+        print(f"PDF 转换跳过: {converted['error']}")
 
     print("\n🎉 报告生成完成！")
 

@@ -12,7 +12,7 @@ compatibility: >-
   Needs Python 3.9+. Python packages are installed on first use into a private virtual environment,
   only after the user agrees. LibreOffice is optional (format conversion only).
 metadata:
-  version: "2.1.0"
+  version: "2.1.1"
   author: "ACKS Studio"
   homepage: "https://github.com/shynloc/ACKS-Office-Suite-Simplify"
 ---

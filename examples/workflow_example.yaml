@@ -1,90 +1,35 @@
-
-# Office Suite 自动化工作流配置示例
-# 功能：每日自动生成销售报告，转换为PDF，发送邮件给相关人员
-
-name: 每日销售报告自动化工作流
-description: 每日9点自动生成前一天的销售报告，发送邮件给管理层
-schedule: "0 9 * * *"  # Cron表达式
-enabled: true
-
-# 工作流步骤
+# 顺序工作流示例：本地生成 Word。
+# 执行一次；定时调度由调用方负责。演示内容不代表当前业务数据。
+# 在仓库根目录运行：
+#   python -m pip install "acks-office[workflow]"
+#   python - <<'PY'
+#   from pathlib import Path
+#   import yaml
+#   from acks_office import OfficeSuite
+#   config = yaml.safe_load(Path("examples/workflow_example.yaml").read_text(encoding="utf-8"))
+#   result = OfficeSuite().execute_workflow(config)
+#   if not result["success"]:
+#       raise RuntimeError(result)
+#   print(result)
+#   PY
+name: 本地报告示例
+description: 使用实际支持的字段顺序生成文档
 steps:
-  # 步骤1：从数据库/API提取销售数据
-  - name: 提取销售数据
-    type: data_extract
-    config:
-      source: "api"
-      endpoint: "https://api.example.com/sales/daily"
-      params:
-        date: "{{ yesterday }}"
-      output: "./temp/daily_sales_{{ date }}.json"
-
-  # 步骤2：生成Word报告
-  - name: 生成Word报告
+  - name: 生成 Word 报告
     type: document_generate
     config:
-      format: "docx"
-      template: "./templates/daily_report_template.docx"
-      data_source: "./temp/daily_sales_{{ date }}.json"
-      output: "./reports/每日销售报告_{{ date }}.docx"
+      format: docx
+      title: "{{ date }} 示例报告"
+      content: |
+        # 示例内容
 
-  # 步骤3：转换为PDF
-  - name: 转换为PDF
-    type: convert
-    config:
-      input: "./reports/每日销售报告_{{ date }}.docx"
-      output: "./reports/每日销售报告_{{ date }}.pdf"
-      target_format: "pdf"
+        这是顺序工作流生成的演示文档。
+      output: "./workflow-report.docx"
 
-  # 步骤4：添加水印
-  - name: 添加水印
-    type: add_watermark
-    config:
-      input: "./reports/每日销售报告_{{ date }}.pdf"
-      output: "./reports/每日销售报告_{{ date }}_水印.pdf"
-      watermark_text: "机密文件 仅限内部传阅"
-      opacity: 0.3
-      position: "center"
-
-  # 步骤5：发送邮件
-  - name: 发送报告邮件
-    type: send_email
-    config:
-      to:
-        - "manager@example.com"
-        - "sales@example.com"
-      subject: "【自动发送】{{ date }} 每日销售报告"
-      body: |
-        各位好，
-
-        附件是{{ date }}的销售日报，请查收。
-
-        总销售额：{{ total_sales }} 万元
-        同比增长：{{ growth_rate }} %
-
-        此致
-        办公室自动化系统
-      attachments:
-        - "./reports/每日销售报告_{{ date }}_水印.pdf"
-
-# 执行成功后处理
-on_success:
-  - type: cleanup
-    config:
-      paths:
-        - "./temp/*.json"
-  - type: notification
-    config:
-      message: "✅ {{ date }} 销售报告已成功生成并发送"
-      channels: ["wecom", "slack"]
-
-# 执行失败后处理
-on_failure:
-  - type: notification
-    config:
-      message: "❌ {{ date }} 销售报告生成失败，请检查: {{ error }}"
-      channels: ["wecom", "admin_email"]
-  - type: retry
-    config:
-      max_retries: 3
-      delay: 60  # 重试间隔，秒
+# 若已安装 LibreOffice，可在 steps 中添加：
+# - name: 转换为 PDF
+#   type: convert
+#   config:
+#     input: "./workflow-report.docx"
+#     output: "./workflow-report.pdf"
+#     target_format: pdf

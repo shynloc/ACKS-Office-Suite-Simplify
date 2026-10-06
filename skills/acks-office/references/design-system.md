@@ -4,13 +4,16 @@
 
 | 需求 | 做法 |
 |---|---|
-| 规范排版（默认） | `--theme acks`：ACKS 参考主题，深墨色 + 橙色强调，Space Grotesk / DM Sans / 思源黑体 |
+| Word / PPT / Excel 规范排版（默认） | `--theme acks`：ACKS 参考主题，深墨色 + 橙色强调，Space Grotesk / DM Sans / 思源黑体 |
 | 朴素排版 | `--theme default`：Word 内置样式，适合再交给别人二次编辑 |
 | 去掉品牌 | `--brand-name ""`：封面、页眉、页脚不出现任何品牌字样 |
 | 换成用户的品牌 | `--brand-name "品牌名"`，页脚默认显示品牌名，可用 `--footer-label` 改 |
 
 ACKS 是这套规范的出品方署名，也是一份**参照**：它示范了一套完整的设计规范应当包含哪些内容。
 用户不想出现 ACKS 字样时，一律加 `--brand-name ""` 或换成用户自己的品牌。
+
+品牌参数用于 ACKS 主题的 Word / PPT。PDF 使用独立的 ReportLab 排版，当前不通过
+`--theme` 或品牌参数切换样式；Excel 也没有品牌参数入口。
 
 ## 一套设计规范包含什么
 
