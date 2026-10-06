@@ -1,4 +1,4 @@
-"""ACKS Office Suite Simplify：按文档设计规范生成、读取、转换 Word / Excel / PPT / PDF，不依赖本机 Office。"""
+"""ACKS Office Suite Simplify：生成、读取办公文档；格式转换通过 LibreOffice。"""
 
 __version__ = "2.1.1"
 __author__ = "Thom Jing (shynloc)"

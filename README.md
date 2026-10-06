@@ -85,7 +85,7 @@ acks-office create pdf -o 报告.pdf --title "经营回顾" --content-file 正�
 acks-office create pptx -o 汇报.pptx --slides-file slides.json --brand-name "栖木咖啡"
 acks-office create excel -o 数据.xlsx --data-file data.csv
 acks-office extract 报告.docx
-acks-office convert 报告.docx --to pdf
+acks-office convert 报告.docx --to pdf -o 转换版.pdf
 acks-office watermark 报告.pdf --text "内部资料"
 acks-office merge a.pdf b.pdf -o 合并.pdf
 ```

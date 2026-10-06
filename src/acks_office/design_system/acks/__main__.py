@@ -3,14 +3,14 @@
 ACKS Studio Design System — CLI entry point.
 
 Usage:
-    python -m acks build docx    # Generate .docx demo
-    python -m acks build pptx    # Generate .pptx demo
-    python -m acks build xlsx    # Generate .xlsx workbook
-    python -m acks build all     # Generate all demos
-    python -m acks validate      # Run validation checks
-    python -m acks tokens check  # Check token sync
-    python -m acks tokens build  # Rebuild *_constants.py from tokens.json
-    python -m acks fonts download # Download Google Fonts for offline use
+    python -m acks_office.design_system.acks build docx
+    python -m acks_office.design_system.acks build pptx
+    python -m acks_office.design_system.acks build xlsx
+    python -m acks_office.design_system.acks build all
+    python -m acks_office.design_system.acks validate
+    python -m acks_office.design_system.acks tokens check
+    python -m acks_office.design_system.acks tokens build
+    python -m acks_office.design_system.acks fonts download
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def cmd_fonts(args):
 def main():
     parser = argparse.ArgumentParser(
         prog="acks",
-        description="ACKS Studio Design System v2.0 — CLI",
+        description="ACKS Studio Design System v2.1 — CLI",
     )
     sub = parser.add_subparsers(dest="command")
 

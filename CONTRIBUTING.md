@@ -13,7 +13,7 @@
 
 ## 发布前
 
-1. 同步程序、技能元数据、入口脚本、README / 安装指南的版本与 CHANGELOG。
+1. 同步程序、技能元数据、入口脚本、README / 安装 / 安全说明的版本与 CHANGELOG。
 2. README 本仓库文件链接使用完整 GitHub URL，指向同版本标签，
    避免 PyPI 将相对路径解析成站内路径。
 3. 运行 `python tools/check_release_docs.py`、相关测试和示例，构建 wheel、sdist、技能包。

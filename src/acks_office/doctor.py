@@ -144,7 +144,7 @@ def _win_app_path(exe: str) -> Optional[str]:
 
 
 def _other_office_apps() -> List[Dict]:
-    """Office、WPS、iWork：只报告是否安装；在 2.x 中作为可选引擎，默认不调用。"""
+    """Office、WPS、iWork：只报告是否安装，2.x 不调用这些程序。"""
     if sys.platform == "darwin":
         found = {
             "microsoft-word": ["/Applications/Microsoft Word.app"],
