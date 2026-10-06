@@ -1,6 +1,6 @@
 # 安装指南
 
-文档对应版本：**2.1.1**。
+文档对应版本：**2.1.2**。
 
 ## 系统要求
 
@@ -10,8 +10,8 @@
 
 ## Agent 技能
 
-从 [2.1.1 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.1)
-下载 `acks-office-skill-2.1.1.zip`，解压到宿主实际配置的技能目录，得到 `acks-office/SKILL.md`。
+从 [2.1.2 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.2)
+下载 `acks-office-skill-2.1.2.zip`，解压到宿主实际配置的技能目录，得到 `acks-office/SKILL.md`。
 
 目录示例：Claude Code `~/.claude/skills/`、Codex `~/.codex/skills/`、
 OpenClaw `~/.openclaw/skills/` 或工作区 `skills/`、WorkBuddy `~/.workbuddy/skills/`、
@@ -31,7 +31,7 @@ macOS / Linux：
 
 ```bash
 python3 -m venv ~/.venvs/acks-office
-~/.venvs/acks-office/bin/python -m pip install acks-office==2.1.1
+~/.venvs/acks-office/bin/python -m pip install acks-office==2.1.2
 ~/.venvs/acks-office/bin/acks-office doctor --json
 ```
 
@@ -39,7 +39,7 @@ Windows PowerShell：
 
 ```powershell
 py -3 -m venv "$env:LOCALAPPDATA\acks-office-cli"
-& "$env:LOCALAPPDATA\acks-office-cli\Scripts\python.exe" -m pip install acks-office==2.1.1
+& "$env:LOCALAPPDATA\acks-office-cli\Scripts\python.exe" -m pip install acks-office==2.1.2
 & "$env:LOCALAPPDATA\acks-office-cli\Scripts\acks-office.exe" doctor --json
 ```
 
@@ -53,8 +53,8 @@ python -m acks_office doctor --json
 可选依赖：
 
 ```bash
-python -m pip install "acks-office[fonts]==2.1.1"
-python -m pip install "acks-office[workflow]==2.1.1"
+python -m pip install "acks-office[fonts]==2.1.2"
+python -m pip install "acks-office[workflow]==2.1.2"
 ```
 
 系统 Python 提示 `externally-managed-environment` 时使用虚拟环境。
@@ -62,11 +62,11 @@ python -m pip install "acks-office[workflow]==2.1.1"
 
 ## GitHub wheel 与源码
 
-从 [2.1.1 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.1)
+从 [2.1.2 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.2)
 下载 wheel，在专用环境安装：
 
 ```bash
-python -m pip install ./acks_office-2.1.1-py3-none-any.whl
+python -m pip install ./acks_office-2.1.2-py3-none-any.whl
 ```
 
 源码开发：
@@ -88,7 +88,7 @@ python test_integration.py
 在用户同意后下载开源中文字体：
 
 ```bash
-python -m pip install "acks-office[fonts]==2.1.1"
+python -m pip install "acks-office[fonts]==2.1.2"
 acks-office fonts install noto-sans-sc
 ```
 
@@ -119,4 +119,4 @@ sudo dnf install -y libreoffice                          # Fedora / OpenCloudOS
 - 国内包镜像可能滞后于 PyPI，刚发布版本可使用官方索引。字体镜像用
   `ACKS_OFFICE_DOWNLOAD_MIRROR` 配置，仍验证 SHA-256。
 - 从旧版升级：`office_suite` 兼容层仍可用，新代码用 `acks_office`。
-  变化见 [CHANGELOG](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/CHANGELOG.md)。
+  变化见 [CHANGELOG](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/CHANGELOG.md)。

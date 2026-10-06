@@ -2,14 +2,13 @@
 
 > 面向 AI Agent 和 Python 程序的办公工具：生成、读取 Word / Excel / PPT / PDF，提供命令行、环境检查和技能包。
 
-文档对应版本：**2.1.1**。GitHub 与 PyPI 使用本文件作为项目说明；历史版本的说明随发行包保留。
+文档对应版本：**2.1.2**。GitHub 与 PyPI 使用本文件作为项目说明；历史版本的说明随发行包保留。
 
 <p align="center">
-  <a href="https://pypi.org/project/acks-office/"><img alt="PyPI" src="https://img.shields.io/pypi/v/acks-office"></a>
   <a href="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml/badge.svg?branch=main"></a>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/平台-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey">
-  <a href="https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
+  <a href="https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
 </p>
 
 由 **ACKS Studio** 出品。安装包名 `acks-office`，导入名 `acks_office`。
@@ -35,7 +34,7 @@
 推荐在专用虚拟环境中从 [PyPI](https://pypi.org/project/acks-office/) 安装：
 
 ```bash
-python -m pip install acks-office==2.1.1
+python -m pip install acks-office==2.1.2
 acks-office doctor --json
 ```
 
@@ -48,13 +47,13 @@ python -m pip install --upgrade acks-office
 下载开源中文字体需要字体可选依赖：
 
 ```bash
-python -m pip install "acks-office[fonts]==2.1.1"
+python -m pip install "acks-office[fonts]==2.1.2"
 acks-office fonts install noto-sans-sc
 ```
 
 各系统虚拟环境、依赖、字体和 LibreOffice 的准备步骤见
-[安装指南](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/INSTALL_GUIDE.md)。
-也可从 [GitHub Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.1)
+[安装指南](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/INSTALL_GUIDE.md)。
+也可从 [GitHub Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.2)
 下载 wheel 或技能包；功能不依赖发布渠道。
 
 ## 三种入口
@@ -64,8 +63,8 @@ acks-office fonts install noto-sans-sc
 技能包由 `SKILL.md`、Python 入口脚本和程序代码组成，供支持技能规范及本地命令执行的 Agent 使用。
 宿主识别依据环境变量、目录等线索给出推测；接入方式与路径以宿主实际配置为准。
 
-1. 从 [GitHub Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.1)
-   下载 `acks-office-skill-2.1.1.zip`。
+1. 从 [GitHub Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.2)
+   下载 `acks-office-skill-2.1.2.zip`。
 2. 解压到宿主技能目录，得到 `acks-office/SKILL.md`。
    Claude Code、Codex、OpenClaw、WorkBuddy、Hermes 的目录示例见安装指南。
 3. Agent 运行 `scripts/acks.py doctor --json`，说明补齐计划并取得用户同意后，
@@ -77,7 +76,7 @@ acks-office fonts install noto-sans-sc
 
 子命令：`create`、`extract`、`convert`、`watermark`、`merge`、`fonts`、`doctor`、`version`。
 以下输入文件由用户准备，数据格式见
-[命令参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/commands.md)。
+[命令参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/skills/acks-office/references/commands.md)。
 
 ```bash
 acks-office create word -o 报告.docx --title "经营回顾" --content-file 正文.md
@@ -114,7 +113,7 @@ data = suite.extract_data("报告.docx")
 
 `OfficeSuite` 的操作返回 `success`；失败时返回 `error`。检查返回值后再报告成功。
 底层格式模块可能直接抛出异常。Python API 与 CLI 的覆盖策略不同，见
-[安全说明](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/SECURITY.md)。
+[安全说明](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/SECURITY.md)。
 
 PDF 拆分与 PPT 切换通过格式模块 API 调用：
 
@@ -140,16 +139,16 @@ PPT 切换支持 fade、push、wipe、split、cover、pull、dissolve、cut、zo
   没有可用字体时回退到未嵌入的 STSong-Light，并返回 `FONT_FALLBACK`。
 
 正文写法见
-[Markdown 参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/markdown.md)，
+[Markdown 参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/skills/acks-office/references/markdown.md)，
 环境等级与字段见
-[doctor 参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/doctor.md)。
+[doctor 参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/skills/acks-office/references/doctor.md)。
 
 ## 工作流范围
 
 `OfficeSuite.execute_workflow(config)` 按顺序执行步骤，调度由调用方负责。
 加载 YAML 或使用 API 数据源时，可安装 `python -m pip install "acks-office[workflow]"`。
 示例见
-[workflow_example.yaml](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/examples/workflow_example.yaml)。
+[workflow_example.yaml](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/examples/workflow_example.yaml)。
 
 当前不执行 `schedule`、`enabled`、`on_success`、`on_failure` 等根配置，也不读取 Word 模板文件；
 `retry` 顺序步骤只返回跳过，`notification` 只打印通知，不发送到 Slack / 企业微信。
@@ -159,7 +158,7 @@ PPT 切换支持 fade、push、wipe、split、cover、pull、dissolve、cut、zo
 
 自定义主题文件、Slate / Folio 主题、`theme init` / `theme preview` 属于后续规划，
 当前发行版没有这些入口。样张定稿见
-[设计参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/design-system.md)。
+[设计参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/skills/acks-office/references/design-system.md)。
 后续功能是否上线，以代码、测试和变更记录为准。
 
 `import office_suite` 是仍可用的旧名兼容层，会发出弃用提示；新代码使用 `acks_office`。
@@ -173,9 +172,9 @@ PPT 切换支持 fade、push、wipe、split、cover、pull、dissolve、cut、zo
 文档在本机处理。doctor 联网检查可用 `--no-network` 关闭；
 字体下载校验固定版本 SHA-256；SMTP 默认验证证书并拒绝明文登录。
 版本变化见
-[CHANGELOG](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/CHANGELOG.md)，
+[CHANGELOG](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/CHANGELOG.md)，
 安全与环境变量见
-[SECURITY.md](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/SECURITY.md)。
+[SECURITY.md](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/SECURITY.md)。
 
 ## 开发与文档维护
 
@@ -191,7 +190,7 @@ python tools/build_skill_bundle.py
 
 README 是 GitHub 与 PyPI 的共同说明来源。功能新增、移除或弃用时同步更新文档，
 将规划和可用功能分开，维护流程见
-[CONTRIBUTING.md](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/CONTRIBUTING.md)。
+[CONTRIBUTING.md](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/CONTRIBUTING.md)。
 
-[MIT 许可证](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/LICENSE)。
+[MIT 许可证](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/LICENSE)。
 设计思路受 [MiniMax Office Skill](https://www.minimaxi.com/) 启发。
