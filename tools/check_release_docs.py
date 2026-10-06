@@ -48,6 +48,8 @@ def main():
             if link.startswith("#"):
                 continue
             parsed = urlsplit(link)
+            if parsed.netloc == "img.shields.io" and parsed.path.startswith("/pypi/v/"):
+                errors.append(filename + ": use the checked text version instead of a cached version badge.")
             if parsed.scheme not in ("https", "http", "mailto"):
                 errors.append(filename + ": relative public link: " + link)
                 continue

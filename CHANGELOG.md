@@ -3,6 +3,13 @@
 格式参照 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.1.2] - 2026-10-06
+
+### 文档
+
+- 移除第三方动态版本徽章，避免图片缓存继续显示旧版本；版本以正文和发行页面的版本号为准。
+- GitHub / PyPI 同步发布新的文档快照，功能与 2.1.1 一致。
+
 ## [2.1.1] - 2026-10-06
 
 ### 文档与发布
@@ -106,6 +113,7 @@
 
 - 首个版本：Word、Excel、PPT、PDF 的生成、转换、水印与邮件发送。
 
+[2.1.2]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.0.0...v2.0.1
