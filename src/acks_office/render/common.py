@@ -5,6 +5,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .. import markdown_blocks as mdb
 
+# 纸张大小（厘米）
+PAGE_SIZES = {"A4": (21.0, 29.7), "A5": (14.8, 21.0), "Letter": (21.59, 27.94)}
+
 # 封面、页眉页脚可用的元数据；其余 front matter 字段原样保留
 META_KEYS = ("title", "subtitle", "kicker", "short_title", "brand", "classification", "publication",
              "issue", "season", "date", "author", "version", "lede", "cover")

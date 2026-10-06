@@ -1,7 +1,7 @@
 
 import os
 from io import BytesIO
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from xml.sax.saxutils import escape
 
 from pypdf import PdfReader, PdfWriter, Transformation
@@ -21,17 +21,33 @@ _ALERT_LABELS = {"note": "Note · 注释", "tip": "Tip · 提示", "important": 
                  "warning": "Warning · 警告", "caution": "Caution · 注意"}
 
 
-def create_pdf(title: str, content: str, output_path: str,
-               font: Optional[str] = None, bold_font: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+LEGACY_THEMES = ("acks", "default")
+
+
+def create_pdf(title: Optional[str], content: str, output_path: str,
+               font: Optional[str] = None, bold_font: Optional[str] = None, theme: Any = "acks",
+               brand_name: Optional[str] = None, footer_label: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     创建PDF文档
     Args:
-        title: 标题
-        content: Markdown 内容（标题、粗体/斜体、链接、列表、表格、引文、代码块、图片）
+        title: 标题；为空时用正文 front matter 里的 title
+        content: Markdown 内容（标题、粗体/斜体、链接、列表、表格、引文与提示块、代码块、图片）；
+            开头可以写 front matter（kicker、subtitle、author、date、version、issue、lede 等）
         output_path: 输出路径
-        font / bold_font: 中文字体文件路径（TrueType），默认自动选择，见 fonts.pdf_fonts
+        font / bold_font: 中文字体文件路径（TrueType），代替主题的中文字体；默认按主题自动选择
+        theme: 主题名称（neutral、slate、folio 或已安装的主题）、主题目录或 Theme 对象；
+            "acks"、"default" 是 2.x 的内置样式
+        brand_name: 品牌名；footer_label: 页脚左侧文字，默认按主题模板生成
         base_dir: 图片相对路径的基准目录，默认当前目录
     """
+    if not (isinstance(theme, str) and theme in LEGACY_THEMES):
+        from .render.pdf import render_pdf
+        meta = {k: v for k, v in kwargs.items() if k not in ("base_dir", "create_chart")}
+        if brand_name is not None:
+            meta["brand"] = brand_name
+        return render_pdf(title, content, output_path, theme=theme, base_dir=kwargs.get("base_dir"),
+                          footer_label=footer_label, font=font, bold_font=bold_font, **meta)
+    title = title or ""
     pdf_fonts = fonts.pdf_fonts(font, bold_font)
     styles = _styles(pdf_fonts)
     doc = SimpleDocTemplate(output_path, pagesize=A4, rightMargin=_MARGIN, leftMargin=_MARGIN,

@@ -436,29 +436,28 @@ def _system_cjk_candidates() -> List[Tuple[Tuple[str, int], Optional[Tuple[str, 
     return _linux_cjk_candidates()
 
 
-_REGISTERED: Dict[Tuple[str, int], Optional[str]] = {}
+_REGISTERED: Dict[Tuple[str, int], Tuple[Optional[str], bool]] = {}
 
 
-def _register_ttf(path: str, index: int = 0) -> Optional[str]:
-    """把一个 TrueType 字体注册给 reportlab；不能用（CFF 轮廓、缺中文字形等）返回 None。"""
+def _register_ttf(path: str, index: int = 0, require_cjk: bool = True) -> Optional[str]:
+    """把一个 TrueType 字体注册给 reportlab，返回注册名；不能用（CFF 轮廓、文件损坏，
+    或 require_cjk 时缺中文字形）返回 None。"""
     key = (os.path.abspath(path), index)
-    if key in _REGISTERED:
-        return _REGISTERED[key]
-    name = None
-    if os.path.isfile(path):
-        try:
-            from reportlab.pdfbase import pdfmetrics
-            from reportlab.pdfbase.ttfonts import TTFont
-            name = "acks-" + hashlib.sha1(f"{key[0]}#{index}".encode()).hexdigest()[:10]
-            font = TTFont(name, path, subfontIndex=index)
-            if not {0x4E2D, 0x6587} <= set(font.face.charToGlyph):  # 「中」「文」
-                name = None
-            else:
+    if key not in _REGISTERED:
+        name, has_cjk = None, False
+        if os.path.isfile(path):
+            try:
+                from reportlab.pdfbase import pdfmetrics
+                from reportlab.pdfbase.ttfonts import TTFont
+                name = "acks-" + hashlib.sha1(f"{key[0]}#{index}".encode()).hexdigest()[:10]
+                font = TTFont(name, path, subfontIndex=index)
+                has_cjk = {0x4E2D, 0x6587} <= set(font.face.charToGlyph)  # 「中」「文」
                 pdfmetrics.registerFont(font)
-        except Exception:
-            name = None
-    _REGISTERED[key] = name
-    return name
+            except Exception:
+                name = None
+        _REGISTERED[key] = (name, has_cjk)
+    name, has_cjk = _REGISTERED[key]
+    return name if (has_cjk or not require_cjk) else None
 
 
 def _family(regular: str, bold: str) -> None:

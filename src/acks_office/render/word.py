@@ -22,9 +22,7 @@ from docx.text.run import Run
 from .. import markdown_blocks as mdb
 from ..themes import Theme, load_theme
 from . import ooxml as ox
-from .common import attach_captions, display_width, document_meta, is_total_row, numeric_columns
-
-PAGE_SIZES = {"A4": (21.0, 29.7), "A5": (14.8, 21.0), "Letter": (21.59, 27.94)}
+from .common import PAGE_SIZES, attach_captions, display_width, document_meta, is_total_row, numeric_columns
 ROLES = ("body", "title", "heading", "label", "number", "display", "quote", "code")
 BULLETS = ("•", "◦", "▪")
 
