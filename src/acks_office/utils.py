@@ -1,8 +1,54 @@
 
+import glob
 import os
-import subprocess
 import shutil
-from typing import Optional, Dict, Any
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Optional, Dict, Any, List
+
+
+def data_dir() -> Path:
+    """本工具的用户数据目录（下载的字体等放在这里）；可用环境变量 ACKS_OFFICE_HOME 覆盖。"""
+    override = os.environ.get("ACKS_OFFICE_HOME")
+    if override:
+        return Path(override).expanduser()
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "acks-office"
+    if os.name == "nt":
+        return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "acks-office"
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "acks-office"
+
+
+def soffice_candidates() -> List[str]:
+    """各系统上 LibreOffice 的标准安装位置（不含 PATH）。"""
+    if sys.platform == "darwin":
+        return ["/Applications/LibreOffice.app/Contents/MacOS/soffice",
+                os.path.expanduser("~/Applications/LibreOffice.app/Contents/MacOS/soffice")]
+    if os.name == "nt":
+        bases = [os.environ.get("ProgramFiles", r"C:\Program Files"),
+                 os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")]
+        return [os.path.join(b, "LibreOffice", "program", "soffice.exe") for b in bases if b]
+    return (["/usr/bin/soffice", "/usr/lib/libreoffice/program/soffice",
+             "/opt/libreoffice/program/soffice", "/snap/bin/libreoffice"]
+            + sorted(glob.glob("/opt/libreoffice*/program/soffice"), reverse=True))
+
+
+def find_soffice() -> Optional[str]:
+    """找到可执行的 LibreOffice：环境变量 ACKS_OFFICE_SOFFICE → PATH → 各系统标准安装位置。"""
+    override = os.environ.get("ACKS_OFFICE_SOFFICE")
+    if override:
+        return override if os.path.isfile(override) else None
+    for name in ("soffice", "libreoffice"):
+        found = shutil.which(name)
+        if found:
+            return found
+    for path in soffice_candidates():
+        if os.path.isfile(path):
+            return path
+    return None
+
 
 def convert_with_libreoffice(input_path: str, target_format: str, output_path: str, **kwargs) -> Dict[str, Any]:
     """
@@ -12,45 +58,34 @@ def convert_with_libreoffice(input_path: str, target_format: str, output_path: s
         target_format: 目标格式扩展名，比如pdf、docx、pptx等
         output_path: 输出文件路径
     """
-    # 检查LibreOffice是否安装
-    libreoffice_path = shutil.which('libreoffice') or shutil.which('soffice')
-    if not libreoffice_path:
-        raise RuntimeError("LibreOffice not found, please install it first. On Ubuntu: sudo apt install libreoffice")
-    
-    output_dir = os.path.dirname(output_path)
-    output_name = os.path.basename(output_path)
-    
-    # 构建命令
-    cmd = [
-        libreoffice_path,
-        "--headless",
-        "--convert-to", target_format,
-        "--outdir", output_dir,
-        input_path
-    ]
-    
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=kwargs.get("timeout", 300)
-        )
-        
-        # 检查是否自动生成的文件名可能和预期不一致，重命名为指定的output_path
-        expected_generated_path = os.path.join(
-            output_dir,
-            f"{os.path.splitext(os.path.basename(input_path))[0]}.{target_format}"
-        )
-        
-        if os.path.exists(expected_generated_path) and expected_generated_path != output_path:
-            os.rename(expected_generated_path, output_path)
-        
-        return {"success": True, "output_path": output_path}
-        
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"LibreOffice转换失败: {e.stderr}")
+    soffice = find_soffice()
+    if not soffice:
+        raise RuntimeError(
+            "未找到 LibreOffice。安装方式：macOS 用 brew install --cask libreoffice；"
+            "Windows 用 winget install TheDocumentFoundation.LibreOffice；"
+            "Ubuntu/Debian 用 sudo apt install libreoffice。也可以用环境变量 ACKS_OFFICE_SOFFICE 指定路径。")
+
+    with tempfile.TemporaryDirectory(prefix="acks-office-") as tmp:
+        out_dir = Path(tmp) / "out"
+        # 独立的用户配置目录：用户正开着 LibreOffice 时，共用配置会让无界面转换静默失败
+        profile = (Path(tmp) / "profile").as_uri()
+        cmd = [soffice, f"-env:UserInstallation={profile}", "--headless", "--norestore",
+               "--convert-to", target_format, "--outdir", str(out_dir), os.path.abspath(input_path)]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True,
+                                    timeout=kwargs.get("timeout", 300))
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("LibreOffice转换超时") from None
+
+        produced = list(out_dir.glob("*")) if out_dir.exists() else []
+        if result.returncode != 0 or len(produced) != 1:
+            detail = (result.stderr or result.stdout or "").strip() or "没有生成输出文件"
+            raise RuntimeError(f"LibreOffice转换失败: {detail}")
+
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        shutil.move(str(produced[0]), output_path)
+
+    return {"success": True, "output_path": output_path, "engine": "libreoffice"}
 
 def get_file_type(file_path: str) -> str:
     """
@@ -74,16 +109,16 @@ def get_file_size(file_path: str, unit: str = "bytes") -> float:
     """
     if not os.path.exists(file_path):
         return 0
-        
+
     size_bytes = os.path.getsize(file_path)
-    
+
     units = {
         "bytes": 1,
         "kb": 1024,
         "mb": 1024*1024,
         "gb": 1024*1024*1024
     }
-    
+
     unit = unit.lower()
     return round(size_bytes / units.get(unit, 1), 2)
 
@@ -100,15 +135,15 @@ def clean_temp_files(temp_dir: str, older_than_hours: int = 24) -> int:
     import time
     now = time.time()
     deleted_count = 0
-    
+
     if not os.path.exists(temp_dir):
         return 0
-        
+
     for filename in os.listdir(temp_dir):
         file_path = os.path.join(temp_dir, filename)
         if os.path.isfile(file_path):
             if (now - os.path.getmtime(file_path)) > older_than_hours * 3600:
                 os.remove(file_path)
                 deleted_count += 1
-                
+
     return deleted_count
