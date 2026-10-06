@@ -26,11 +26,11 @@ class TestTokenSync:
         expected = tok["color"]["brand"]["PRIMARY"].lstrip("#").upper()
 
         # tokens_constants.py
-        tc = (ROOT / "tokens_constants.py").read_text()
+        tc = (ROOT / "tokens_constants.py").read_text(encoding="utf-8")
         assert f'COLOR_PRIMARY = "{expected}"' in tc
 
         # slides_constants.py
-        sc = (ROOT / "slides_constants.py").read_text()
+        sc = (ROOT / "slides_constants.py").read_text(encoding="utf-8")
         r, g, b = int(expected[0:2], 16), int(expected[2:4], 16), int(expected[4:6], 16)
         assert f"RGBColor(0x{r:02X}, 0x{g:02X}, 0x{b:02X})" in sc
 
@@ -39,7 +39,7 @@ class TestTokenSync:
             tok = json.load(f)
         expected = tok["font"]["family"]["DISPLAY_EN"]
 
-        tc = (ROOT / "tokens_constants.py").read_text()
+        tc = (ROOT / "tokens_constants.py").read_text(encoding="utf-8")
         assert f'FONT_DISPLAY_EN = "{expected}"' in tc
 
 
