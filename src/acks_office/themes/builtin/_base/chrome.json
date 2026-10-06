@@ -7,7 +7,8 @@
   "labels": {
     "table": "表", "figure": "图", "toc": "目录", "issue": "No.",
     "date": "日期", "author": "编制", "version": "版本",
-    "note": "说明", "tip": "提示", "important": "重要", "warning": "警告", "caution": "注意"
+    "note": "说明", "tip": "提示", "important": "重要", "warning": "警告", "caution": "注意",
+    "total": "合计"
   },
   "doc": {
     "header": {"left": "{title}", "right": "{brand}"},

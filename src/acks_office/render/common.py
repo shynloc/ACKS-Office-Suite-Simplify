@@ -91,6 +91,19 @@ def is_total_row(cells: List[str]) -> bool:
     return bool(cells) and bool(_TOTAL.match(cells[0]))
 
 
+def records_to_rows(records: List[Dict[str, Any]]) -> List[List[Any]]:
+    """对象数组（每行一个对象）→ 二维数组：表头为各对象键的并集，按首次出现的顺序。"""
+    header: List[str] = []
+    for record in records:
+        header += [key for key in record if key not in header]
+    return [list(header)] + [[record.get(key) for key in header] for record in records]
+
+
+def numeric_text(text: str) -> bool:
+    """像数字的文字：1,234、-5.6%、(1.3)、¥200 等。"""
+    return bool(_NUMERIC.match(text))
+
+
 def numeric_columns(header: List[str], rows: List[List[str]], aligns: List[Optional[str]]) -> List[int]:
     """数字列：Markdown 里标了右对齐，或除表头外的单元格全是数字。"""
     width = max([len(header)] + [len(r) for r in rows]) if (header or rows) else 0

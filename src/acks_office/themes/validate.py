@@ -16,15 +16,17 @@ VARIANTS = {
     "layout.doc.quote": ("bar", "pull"),
     "layout.doc.caption": ("plain", "accent"),
     "layout.doc.table.head": ("fill", "label"),
+    "layout.doc.table.total": ("rules", "bar"),
     "layout.doc.page.size": ("A4", "A5", "Letter"),
     "layout.slide.cover": ("simple", "split", "issue"),
     "layout.slide.section": ("light", "dark"),
     "layout.slide.content": ("stacked", "columns"),
     "layout.sheet.head": ("fill", "label"),
+    "layout.sheet.total": ("rules", "bar"),
 }
 COLOR_REFS = ("layout.doc.table.head_rule", "layout.doc.table.row_rule", "layout.doc.table.total_rule",
               "layout.sheet.head_rule", "layout.sheet.row_rule", "layout.sheet.total_rule",
-              "layout.sheet.negative", "layout.sheet.tab_color")
+              "layout.sheet.negative", "layout.sheet.highlight", "layout.sheet.tab_color")
 RANGES = (("type.", 4, 400), ("leading.", 1.0, 3.0), ("space.", 0, 400), ("tracking.", 0, 1),
           ("layout.doc.page.margin_cm.", 0.5, 6), ("layout.doc.page.header_cm", 0.2, 4),
           ("layout.doc.page.footer_cm", 0.2, 4), ("layout.doc.columns", 1, 3),

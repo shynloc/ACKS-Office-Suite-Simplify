@@ -140,6 +140,18 @@ def test_slate_table_caption_header_fill_and_total_row(tmp_path):
     assert "区域 | 营收 | 同比" in extract_text(str(out))
 
 
+def test_total_row_rules_follow_the_theme(tmp_path):
+    def total_borders(theme):
+        _, _, doc = _render(tmp_path, theme)
+        (table,) = [t for t in doc.tables if t._cells[0].text == "区域"]
+        borders = table.rows[-1].cells[1]._tc.tcPr.find(qn("w:tcBorders"))
+        return {child.tag.split("}")[1]: (child.get(qn("w:sz")), child.get(qn("w:color"))) for child in borders}
+
+    slate, folio = themes.load_theme("slate"), themes.load_theme("folio")
+    assert total_borders("slate") == {"top": ("6", slate.hex("rule_strong")), "bottom": ("6", slate.hex("rule_strong"))}
+    assert total_borders("folio") == {"top": ("12", folio.hex("accent"))}  # bar：上方一条粗线
+
+
 def test_callout_and_quote_variants(tmp_path):
     _, _, slate = _render(tmp_path, "slate")
     callout = [t for t in slate.tables if "提示" in t._cells[0].text]

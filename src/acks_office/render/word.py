@@ -717,14 +717,13 @@ class WordRenderer:
                     else:
                         sides["bottom"] = (1.5, self.t.hex(tokens["head_rule"]))
                 elif total_row:
-                    rule = tokens["total_rule"]
-                    weight = 1.5 if rule == "accent" else 0.75
-                    sides["top"] = (weight, self.t.hex(rule))
-                    if rule != "accent":
-                        sides["bottom"] = (0.75, self.t.hex(rule))
+                    # rules：上下各一条细线；bar：上方一条粗线
+                    bar = tokens["total"] == "bar"
+                    sides["top"] = (1.5 if bar else 0.75, self.t.hex(tokens["total_rule"]))
+                    if not bar:
+                        sides["bottom"] = (0.75, self.t.hex(tokens["total_rule"]))
                 elif r == last:
-                    sides["bottom"] = (0.75, self.t.hex(tokens["total_rule"] if tokens["total_rule"] != "accent"
-                                                         else tokens["row_rule"]))
+                    sides["bottom"] = (0.75, self.t.hex(tokens["row_rule" if tokens["total"] == "bar" else "total_rule"]))
                 elif not (r + 1 <= last and is_total_row(rows_text[r + 1 - (1 if has_header else 0)])):
                     sides["bottom"] = (0.75, self.t.hex(tokens["row_rule"]))
                 if sides:

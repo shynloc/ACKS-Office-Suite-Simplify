@@ -76,15 +76,28 @@ def _load_json(file: str) -> Any:
         raise CliError("INVALID_INPUT", f"{file} 不是有效的 JSON：{exc}") from None
 
 
-def _load_table(file: str) -> List[List[Any]]:
-    """Excel 数据：JSON 二维数组（第一行为表头），或 CSV。"""
+def _load_table(file: str) -> Tuple[Optional[List[Any]], Optional[List[Dict[str, Any]]], Dict[str, Any]]:
+    """Excel 数据 → (data, sheets, meta)。
+
+    JSON 二维数组（第一行为表头）、对象数组（每行一个对象，键为表头，和 extract 的输出一样）、
+    {"meta": {...}, "sheets": [...]}（多张工作表），或 CSV。
+    """
     if file != "-" and file.lower().endswith(".csv"):
         rows = list(csv.reader(_read_text(None, file).splitlines()))
-        return rows[:1] + [[_csv_value(v) for v in row] for row in rows[1:]]
+        return rows[:1] + [[_csv_value(v) for v in row] for row in rows[1:]], None, {}
     data = _load_json(file)
-    if not (isinstance(data, list) and all(isinstance(r, list) for r in data)):
-        raise CliError("INVALID_INPUT", "Excel 数据需要是二维数组，例如 [[\"部门\", \"1月\"], [\"一部\", 150]]")
-    return data
+    if isinstance(data, dict):
+        meta, sheets = data.get("meta") or {}, data.get("sheets")
+        if not (isinstance(sheets, list) and sheets and isinstance(meta, dict)
+                and all(isinstance(s, dict) and isinstance(s.get("rows", []), list) for s in sheets)):
+            raise CliError("INVALID_INPUT", "多张工作表需要写成 {\"sheets\": [{\"name\": \"Q3\", "
+                                            "\"header\": [\"部门\", \"7月\"], \"rows\": [[\"一部\", 150]]}]}")
+        return None, sheets, meta
+    if isinstance(data, list) and (all(isinstance(r, list) for r in data) or
+                                   (data and all(isinstance(r, dict) for r in data))):
+        return data, None, {}
+    raise CliError("INVALID_INPUT", "Excel 数据需要是二维数组，例如 [[\"部门\", \"1月\"], [\"一部\", 150]]；"
+                                    "也可以是对象数组，或 {\"sheets\": [...]}（多张工作表）")
 
 
 def _load_slides(file: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
@@ -168,9 +181,21 @@ def cmd_create(args) -> Dict:
             kwargs["font"] = args.font
     elif kind == "excel":
         if not args.data_file:
-            raise CliError("INVALID_INPUT", "生成 Excel 需要 --data-file（JSON 二维数组或 CSV）")
-        kwargs["data"] = _load_table(args.data_file)
+            raise CliError("INVALID_INPUT", "生成 Excel 需要 --data-file（JSON 二维数组、对象数组、{\"sheets\": [...]} 或 CSV）")
+        data, sheets, table_meta = _load_table(args.data_file)
+        if sheets is not None:
+            if args.theme in ("acks", "default"):
+                raise CliError("INVALID_INPUT", "多张工作表需要主题，2.x 的内置样式只支持二维数组",
+                               "加上 --theme neutral（或 slate、folio）")
+            kwargs["sheets"] = sheets
+        else:
+            kwargs["data"] = data
         kwargs["create_chart"] = args.chart
+        for key, value in table_meta.items():
+            if key == "title" and title is None:
+                title = value
+            elif key != "title":
+                kwargs.setdefault(key, value)
     elif kind == "pptx":
         if not args.slides_file:
             raise CliError("INVALID_INPUT", "生成 PPT 需要 --slides-file（JSON 数组，每项含 title、content、layout）")
@@ -181,7 +206,12 @@ def cmd_create(args) -> Dict:
             elif key != "title":
                 kwargs.setdefault(key, value)
 
-    kwargs["title"] = title or kwargs.get("title") or Path(args.output).stem
+    if kind == "excel" and args.theme not in ("acks", "default"):
+        # 表格的标题写在第 1 行：没给标题就不加标题行，工作表名用文件名
+        kwargs["title"] = title or kwargs.get("title")
+        kwargs.setdefault("sheet_name", Path(args.output).stem)
+    else:
+        kwargs["title"] = title or kwargs.get("title") or Path(args.output).stem
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     return _from_result(_suite(args.theme).create(kind, **kwargs), "CREATE_FAILED", args.output)
 

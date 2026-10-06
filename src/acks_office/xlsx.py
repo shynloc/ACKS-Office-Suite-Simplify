@@ -7,22 +7,43 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.chart import BarChart, Reference
 import pandas as pd
 
-def create_excel(title: str, data: List[List[Any]], output_path: str,
+LEGACY_THEMES = ("acks", "default")
+
+
+def create_excel(title: Optional[str], data: Optional[List[Any]] = None, output_path: str = "",
                  create_chart: bool = False,
-                 theme: str = "acks", **kwargs) -> Dict[str, Any]:
+                 theme: Any = "acks", sheets: Optional[List[Dict[str, Any]]] = None,
+                 **kwargs) -> Dict[str, Any]:
     """
     创建 Excel 表格。
 
     Args:
-        title: 表格标题
-        data: 二维数组数据，第一行为表头
+        title: 表格标题，写在第 1 行（不传则没有标题行）；也是工作簿的标题
+        data: 二维数组（第一行为表头），或对象数组（每行一个对象，键为表头）
         output_path: 输出路径
-        create_chart: 是否生成柱状图
-        theme: "acks"（符合 ACKS 设计规范，默认）或 "default"（简单样式）
+        create_chart: 是否生成图表（数值列默认取第一个数字列）
+        theme: 主题名称（neutral、slate、folio 或已安装的主题）、主题目录或 Theme 对象；
+            "acks"、"default" 是 2.x 的内置样式
+        sheets: 多张工作表，每项 {name, title, header, rows, formats, total, highlight, note, chart}，
+            代替 data（需要主题，2.x 的内置样式不支持）
+        sheet_name: 只有 data 时的工作表名，默认用标题
+        font_policy: "local"（缺主题字体时改用本机字体，默认）或 "theme"（总是写主题字体名）
     """
-    if theme == "acks":
-        return _create_excel_acks(title, data, output_path, create_chart, **kwargs)
-    return _create_excel_default(title, data, output_path, create_chart, **kwargs)
+    from .render.common import records_to_rows
+    if not output_path:
+        raise ValueError("需要 output_path（输出文件路径）")
+    if data and all(isinstance(row, dict) for row in data):
+        data = records_to_rows(data)
+    if isinstance(theme, str) and theme in LEGACY_THEMES:
+        if sheets is not None:
+            raise ValueError("多张工作表（sheets）需要主题，例如 theme=\"neutral\"；2.x 的内置样式只支持 data")
+        title = title or kwargs.get("sheet_name") or "Sheet1"
+        if theme == "acks":
+            return _create_excel_acks(title, data or [], output_path, create_chart, **kwargs)
+        return _create_excel_default(title, data or [], output_path, create_chart, **kwargs)
+    from .render.sheet import render_sheets
+    return render_sheets(title, output_path, data=data, sheets=sheets, theme=theme,
+                         create_chart=create_chart, **kwargs)
 
 
 def _create_excel_acks(title: str, data: List[List[Any]], output_path: str,
@@ -135,7 +156,9 @@ def extract_data(input_path: str, sheet_name: Optional[Union[str, int]] = None,
         input_path: 输入文件路径（.xlsx / .xls）
         sheet_name: 工作表名或从 0 开始的索引；不传或传 None 时读取第一个工作表
         **kwargs: 透传给 pandas.read_excel，如 header、dtype、usecols；
-            未传 dtype / converters 时默认 dtype=object，即按单元格原值读取，不做类型推断
+            未传 dtype / converters 时默认 dtype=object，即按单元格原值读取，不做类型推断；
+            未传 header / skiprows / names 时，第 1 行是标题（只有一个单元格有内容、第 2 行至少两个）
+            就从第 2 行读表头
     Returns:
         字典列表，每一行是一个字典，key是表头。值可直接 JSON 序列化：
         空单元格为 None，日期/时间/时长为 ISO 8601 字符串
@@ -147,9 +170,21 @@ def extract_data(input_path: str, sheet_name: Optional[Union[str, int]] = None,
     if "dtype" not in kwargs and "converters" not in kwargs:
         kwargs["dtype"] = object
     # pandas 的 sheet_name=None 表示读取全部工作表并返回 dict，这里固定为读取第一个工作表
-    df = pd.read_excel(input_path, sheet_name=0 if sheet_name is None else sheet_name, **kwargs)
+    sheet = 0 if sheet_name is None else sheet_name
+    if not any(key in kwargs for key in ("header", "skiprows", "names")) and _has_title_row(input_path, sheet):
+        kwargs["header"] = 1
+    df = pd.read_excel(input_path, sheet_name=sheet, **kwargs)
     return [{_to_json_value(k): _to_json_value(v) for k, v in row.items()}
             for row in df.to_dict('records')]
+
+
+def _has_title_row(input_path: str, sheet: Union[str, int]) -> bool:
+    """第 1 行只有一个单元格有内容、第 2 行至少两个：第 1 行是表格标题，表头在第 2 行。"""
+    head = pd.read_excel(input_path, sheet_name=sheet, header=None, nrows=2, dtype=object)
+    if len(head) < 2:
+        return False
+    first, second = (int(head.iloc[i].notna().sum()) for i in range(2))
+    return first == 1 and second >= 2
 
 
 def _to_json_value(value: Any) -> Any:
