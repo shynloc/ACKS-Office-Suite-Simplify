@@ -301,9 +301,25 @@ def cmd_theme(args) -> Dict:
         return _envelope(True, {"default": themes.DEFAULT_THEME, "user_dir": str(themes.user_theme_dir()),
                                 "themes": themes.list_themes()})
     if not args.name:
-        raise CliError("USAGE_ERROR", "请指定主题名称或主题目录", f"例如 theme {args.action} slate")
+        example = "my-brand --extends slate --accent #0B6E4F" if args.action == "init" else "slate"
+        raise CliError("USAGE_ERROR", "请指定主题名称或主题目录", f"例如 theme {args.action} {example}")
     if args.action == "show":
         return _envelope(True, themes.load_theme(args.name).describe())
+    if args.action == "init":
+        from .themes.scaffold import init_theme
+        data = init_theme(args.name, extends=args.extends, accent=args.accent, brand=args.brand,
+                          title=args.title, directory=args.dir, force=args.force)
+        return _envelope(True, data, [_artifact(f) for f in data["files"]], data["validation"]["warnings"])
+    if args.action == "preview":
+        from .themes.preview import FORMATS, build_preview
+        formats = [f.strip() for f in (args.formats or ",".join(FORMATS)).split(",") if f.strip()]
+        out_dir = args.output or f"{Path(args.name).name}-preview"
+        try:
+            data = build_preview(args.name, out_dir, formats)
+        except ValueError as exc:
+            raise CliError("INVALID_INPUT", str(exc)) from None
+        return _envelope(True, data, [_artifact(f) for f in data["files"].values()],
+                         data["warnings"] + data["validation"]["warnings"])
     report = themes.validate_theme(args.name, check_installed=not args.no_fonts)
     if report["ok"]:
         return _envelope(True, report, warnings=report["warnings"])
@@ -388,10 +404,18 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--overwrite", action="store_true")
     p.set_defaults(func=cmd_merge)
 
-    p = sub.add_parser("theme", parents=[common], help="查看、校验主题")
-    p.add_argument("action", choices=["list", "show", "validate"])
-    p.add_argument("name", nargs="?", help="主题名称（如 slate）或主题目录")
+    p = sub.add_parser("theme", parents=[common], help="查看、校验、新建主题，生成主题样张")
+    p.add_argument("action", choices=["list", "show", "validate", "init", "preview"])
+    p.add_argument("name", nargs="?", help="主题名称（如 slate）或主题目录；init 时为新主题的名称")
     p.add_argument("--no-fonts", action="store_true", help="校验时不检查本机字体")
+    p.add_argument("--extends", default="neutral", help="init：继承的主题，默认 neutral")
+    p.add_argument("--accent", help="init：强调色，如 #0B6E4F")
+    p.add_argument("--brand", help="init：品牌名，用在封面和页眉页脚")
+    p.add_argument("--title", help="init：主题的显示名称")
+    p.add_argument("--dir", help="init：主题目录，默认放在用户主题目录（之后可按名称使用）")
+    p.add_argument("--force", action="store_true", help="init：目录已存在时覆盖主题文件")
+    p.add_argument("-o", "--output", help="preview：样张目录，默认 <主题>-preview")
+    p.add_argument("--formats", help="preview：要生成的格式，逗号分隔，默认 html,docx,pdf,pptx,xlsx")
     p.set_defaults(func=cmd_theme)
 
     p = sub.add_parser("fonts", parents=[common], help="查看字体情况或安装开源字体")

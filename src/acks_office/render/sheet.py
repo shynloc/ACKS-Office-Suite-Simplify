@@ -9,6 +9,7 @@ import json
 import math
 import os
 import re
+import stat
 import tempfile
 import zipfile
 from typing import Any, Dict, List, Optional, Sequence
@@ -443,6 +444,7 @@ def _store_cached(path: str, titles: List[str], cached: Dict[str, Dict[str, floa
         entries = [(info, source.read(info.filename)) for info in source.infolist()]
     fd, tmp = tempfile.mkstemp(suffix=".xlsx", dir=os.path.dirname(os.path.abspath(path)))
     os.close(fd)
+    os.chmod(tmp, stat.S_IMODE(os.stat(path).st_mode))  # 临时文件默认只有自己可读，沿用原文件的权限
     try:
         with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as target:
             for info, data in entries:
