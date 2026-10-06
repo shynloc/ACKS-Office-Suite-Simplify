@@ -20,7 +20,8 @@ def main():
 
     def check(name, cond):
         results.append((name, cond))
-        print(f"{'✅' if cond else '❌'} {name}")
+        # Windows CI 的重定向标准输出可能是 CP1252，测试日志使用 ASCII。
+        print(f"{'[PASS]' if cond else '[FAIL]'} {name}")
 
     # 1. Word（ACKS 主题）
     word_path = os.path.join(tmp, "report.docx")
@@ -79,11 +80,11 @@ def main():
     passed = sum(1 for _, ok in results if ok)
     total = len(results)
     print(f"\n{'='*40}")
-    print(f"通过 {passed}/{total} 项测试")
+    print(f"Passed {passed}/{total} integration checks")
     if passed == total:
-        print("✅ 所有功能测试通过")
+        print("All integration checks passed")
     else:
-        print("❌ 存在失败项")
+        print("Integration checks failed")
         sys.exit(1)
 
 
