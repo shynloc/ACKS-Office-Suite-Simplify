@@ -31,15 +31,15 @@ def cmd_build(args):
 
     for t in targets:
         if t == "docx":
-            from tokens import save_demo
+            from ..tokens import save_demo
             out = save_demo("ACKS-demo.docx")
             print(f"  {out}")
         elif t == "pptx":
-            from slides import save_demo
+            from ..slides import save_demo
             out = save_demo("ACKS-deck.pptx")
             print(f"  {out}")
         elif t == "xlsx":
-            from xlsx import save_demo
+            from ..xlsx import save_demo
             out = save_demo("ACKS-workbook.xlsx")
             print(f"  {out}")
 

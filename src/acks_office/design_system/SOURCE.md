@@ -1,6 +1,6 @@
 # 设计规范来源说明
 
-本目录（`design_system/`）集成了 **ACKS Studio 文档设计规范 v2.1**，使 office_suite
+本目录（`design_system/`）集成了 **ACKS Studio 文档设计规范 v2.1**，使 acks_office
 产出的 Word / PowerPoint / Excel 文档直接符合规范。
 
 ## 来源
@@ -25,17 +25,18 @@
 
 - HTML 规范文档（`ACKS Studio 文档设计规范.html` 等）
 - `css/`、`js/`、`examples/`（HTML 示例模板）
-- `assets/logo-*.png`（品牌 logo，未被 office_suite 代码引用，保留在知识库）
+- `assets/logo-*.png`（品牌 logo，未被 acks_office 代码引用，保留在知识库）
 
-以上属于设计规范的知识库参考资料（给人查阅），非 office_suite 运行依赖，故不复制。
+以上属于设计规范的知识库参考资料（给人查阅），非 acks_office 运行依赖，故不复制。
 
 ## 本地改动
 
 - 三个代码生成模块的 constants import 由绝对 import 改为**相对 import**
   （`from tokens_constants import *` → `from .tokens_constants import *`），
-  以适配 Python 包结构 `office_suite.design_system`。
-- `tests/` 相应改为经由包路径导入（`from tokens import ...` → `from office_suite.design_system.tokens import ...`），
+  以适配 Python 包结构 `acks_office.design_system`。
+- `tests/` 相应改为经由包路径导入（`from tokens import ...` → `from acks_office.design_system.tokens import ...`），
   `tests/conftest.py` 改为把 `src/` 加入 `sys.path`。
+- `acks/__main__.py` 的 import 同样改为包内相对 import（`from tokens import` → `from ..tokens import`）。
 
 ## 同步策略
 
@@ -47,5 +48,5 @@
 4. 运行 `python scripts/validate.py` 确认一致性
 
 > 品牌参数化说明：v2 原代码硬编码「ACKS STUDIO · 爱驰科驶」品牌名、logo 与页脚 label。
-> office_suite 集成时将这些抽为可配置参数（默认保留 ACKS 品牌，支持去品牌化/换品牌），
-> 具体见 `office_suite/core.py` 与各格式模块的 `theme` / `brand_*` 参数。
+> acks_office 集成时将这些抽为可配置参数（默认保留 ACKS 品牌，支持去品牌化/换品牌），
+> 具体见 `acks_office/core.py` 与各格式模块的 `theme` / `brand_*` 参数。

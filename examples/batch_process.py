@@ -4,7 +4,7 @@
 批量处理示例：批量转换整个目录的Word文档为PDF
 """
 
-from office_suite import OfficeSuite
+from acks_office import OfficeSuite
 import os
 
 def main():

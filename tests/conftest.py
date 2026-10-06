@@ -1,4 +1,4 @@
-"""pytest configuration — adds src/ to sys.path so `import office_suite` works without installing."""
+"""pytest configuration — adds src/ to sys.path so `import acks_office` works without installing."""
 
 import sys
 from pathlib import Path

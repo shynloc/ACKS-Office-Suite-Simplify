@@ -10,12 +10,12 @@ import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from office_suite import OfficeSuite  # noqa: E402
+from acks_office import OfficeSuite  # noqa: E402
 
 
 def main():
     suite = OfficeSuite(theme="acks")
-    tmp = tempfile.mkdtemp(prefix="office_suite_test_")
+    tmp = tempfile.mkdtemp(prefix="acks_office_test_")
     results = []
 
     def check(name, cond):
@@ -71,7 +71,7 @@ def main():
 
     # 9. 合并 PDF
     merged_path = os.path.join(tmp, "merged.pdf")
-    from office_suite.pdf import merge_pdfs
+    from acks_office.pdf import merge_pdfs
     r = merge_pdfs([pdf_path, wm_path], merged_path)
     check("merge pdfs", os.path.exists(merged_path))
 

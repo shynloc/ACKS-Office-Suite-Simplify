@@ -676,7 +676,7 @@ def add_cover_page(doc: _Doc, *,
     """Build a cover page.
 
     `brand_name` is the top stamp text; pass "" or a custom brand to
-    de-brand / re-brand (office_suite D1 integration).
+    de-brand / re-brand (acks_office integration).
     """
     stamp = doc.add_paragraph()
     run = stamp.add_run(brand_name)
