@@ -3,6 +3,16 @@
 格式参照 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.1.1] - 2026-10-06
+
+### 文档与发布
+
+- GitHub / PyPI 共用 README，安装入口更新为 PyPI，文档链接改为同版本的 GitHub 完整地址。
+- 按实际实现说明 PDF 排版与字体条件、主题和品牌范围、CLI / Python API 区别及 LibreOffice 转换边界。
+- 工作流示例移除未执行的调度、模板、回调和外部通知配置；使用示例按返回值报告结果。
+- 补充文档维护规则；CI 与生产发布检查版本、CLI 入口清单和文档链接，生产发布须使用匹配版本标签。
+- 程序功能与 2.1.0 一致；本版本用于同步发行包中的项目说明、元数据和示例。
+
 ## [2.1.0] - 2026-10
 
 面向 AI Agent 的版本：可在 macOS、Windows、Linux 上不依赖本机 Office 出品，首次使用时自检环境，
@@ -96,6 +106,7 @@
 
 - 首个版本：Word、Excel、PPT、PDF 的生成、转换、水印与邮件发送。
 
+[2.1.1]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/shynloc/ACKS-Office-Suite-Simplify/compare/v1.0.0...v2.0.0

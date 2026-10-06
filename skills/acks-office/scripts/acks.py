@@ -15,7 +15,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 MIN_PYTHON = (3, 9)
 SKILL_DIR = Path(__file__).resolve().parent.parent
 ARCHIVE = "https://github.com/shynloc/ACKS-Office-Suite-Simplify/archive/refs/tags/v{}.zip".format(VERSION)

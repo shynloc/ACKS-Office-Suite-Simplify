@@ -1,10 +1,12 @@
 # 发布到 PyPI（手动触发）。
 #
-# 使用前需在 PyPI 配置「可信发布」（Trusted Publishing），不需要也不要保存任何令牌：
+# 本仓库已使用 GitHub OIDC 可信发布；仅手动触发，使用 v<版本> 标签。
+# 以下配置供迁移或重建环境时参考，不需要保存 API 令牌：
 #   PyPI → 账号 → Publishing → Add a new pending publisher
 #   PyPI Project Name: acks-office · Owner: shynloc · Repository: ACKS-Office-Suite-Simplify
 #   Workflow name: publish.yml · Environment name: pypi
-# 并在 GitHub 仓库 Settings → Environments 新建名为 pypi 的环境（可设置需要审批）。
+# 现有项目在项目的 Publishing 页配置；首次创建项目才使用 pending publisher。
+# GitHub Environment 名为 pypi。
 name: publish
 
 on:
@@ -23,6 +25,7 @@ jobs:
           python-version: "3.12"
       - name: Build
         run: |
+          python tools/check_release_docs.py --tag "${{ github.ref_name }}" --ref-type "${{ github.ref_type }}"
           python -m pip install build
           python -m build
       - uses: actions/upload-artifact@v7

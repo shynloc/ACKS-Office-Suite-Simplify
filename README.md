@@ -1,172 +1,197 @@
 # ACKS Office Suite Simplify
 
-> 让 AI Agent 和 Python 程序在任何电脑上产出排版规范的 Word / Excel / PPT / PDF——**不需要安装 Office**。
+> 面向 AI Agent 和 Python 程序的办公工具：生成、读取 Word / Excel / PPT / PDF，提供命令行、环境检查和技能包。
+
+文档对应版本：**2.1.1**。GitHub 与 PyPI 使用本文件作为项目说明；历史版本的说明随发行包保留。
 
 <p align="center">
-  <a href="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml/badge.svg"></a>
+  <a href="https://pypi.org/project/acks-office/"><img alt="PyPI" src="https://img.shields.io/pypi/v/acks-office"></a>
+  <a href="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/shynloc/ACKS-Office-Suite-Simplify/actions/workflows/tests.yml/badge.svg?branch=main"></a>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/平台-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey">
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
+  <a href="https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
 </p>
 
-文件全部由 Python 直接写出，用户电脑上有没有 Microsoft Office、WPS 都不影响出品；LibreOffice 只在需要
-格式转换时才用到。内置的 ACKS 主题是一套完整的文档设计规范参照，也可以一键去掉品牌、换成你自己的品牌。
+由 **ACKS Studio** 出品。安装包名 `acks-office`，导入名 `acks_office`。
+生成与读取文件由 Python 库完成，不需要 Microsoft Office 或 WPS；格式转换需要 LibreOffice。
 
-由 **ACKS Studio** 出品。包名 `acks-office`，导入名 `acks_office`。
+## 当前能力
 
-## 能做什么
+| 格式 / 入口 | 已实现 | 范围与条件 |
+|---|---|---|
+| Word `.docx` | Markdown 正文、表格、提示块、代码、图片、链接；提取正文与表格；合并、水印 | `acks` / `default` 两种主题 |
+| PDF | Markdown 排版、提取已有文字、合并、水印；Python API 按页拆分 | 有可用中文 TrueType 字体时嵌入，否则回退并报告 `FONT_FALLBACK`；扫描文字需外部 OCR |
+| PPT `.pptx` | 封面与内容页、文字提取、品牌与页脚参数；Python API 添加切换效果 | `acks` / `default` 两种主题；切换效果通过 Python API 调用 |
+| Excel | 生成 `.xlsx`，读取 `.xlsx` / `.xls`，保留文本型编号、日期转 ISO 字符串 | `default` 主题可添加柱状图 |
+| `convert` | 委托 LibreOffice 转换文件，如 DOCX → PDF | 转换方向取决于引擎的导入 / 导出过滤器 |
+| `doctor` | 只读检查 Python、依赖、字体、LibreOffice、宿主线索，给出补齐计划 | 不执行安装；其他 Office 程序只检测、不调用 |
+| Python API 扩展 | SMTP 邮件、批量操作、顺序执行工作流配置 | 邮件需 SMTP 配置；API 数据源 / YAML 示例使用 `workflow` 可选依赖 |
 
-| 格式 | 生成 | 读取 | 其他 |
-|---|---|---|---|
-| Word | Markdown 正文 → 规范排版（标题、列表、任务清单、表格、提示块、代码、图片、链接） | 正文与表格文字 | 合并、水印 |
-| PDF | 同上，自动嵌入中文字体 | 文字 | 合并、拆分、水印 |
-| PPT | 封面页、内容页，品牌与页脚可配置 | 每页文字 | 切换效果 |
-| Excel | 表头、斑马纹、数字格式（`default` 主题可附柱状图） | 每行一个对象（保留文本型编号，日期为 ISO 字符串） | — |
-| 转换 | docx / xlsx / pptx / pdf 等互转（需要 LibreOffice） | | |
+直接读取支持 `.docx`、`.pdf`、`.pptx`、`.xlsx`、`.xls`。
+旧版 `.doc` / `.ppt` 可先交给 LibreOffice 转换。格式转换不保证任意两种格式都能互转。
 
-## 三种用法
+## 安装与升级
 
-### 1. 作为 Agent 技能（Skill）
-
-适用于 Claude Code、Codex、OpenClaw、WorkBuddy、Hermes 等支持 [Agent Skills](https://agentskills.io) 的 Agent。
-
-1. 从 [Releases](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases) 下载
-   `acks-office-skill-<版本>.zip`（已包含程序代码）；
-2. 解压到 Agent 的技能目录，得到 `<技能目录>/acks-office/SKILL.md`。常见位置：
-
-   | Agent | 技能目录（以各 Agent 文档为准） |
-   |---|---|
-   | Claude Code | `~/.claude/skills/` |
-   | Codex | `~/.codex/skills/` |
-   | OpenClaw | `~/.openclaw/skills/` 或工作区的 `skills/` |
-   | WorkBuddy | `~/.workbuddy/skills/` |
-   | Hermes | `~/.hermes/skills/` |
-
-3. 在 Agent 里直接说「帮我写一份季度报告，导出 Word 和 PDF」即可。
-
-第一次使用时，Agent 会运行 `doctor` 检查环境：识别自己所在的 Agent、检查 Python 与依赖、PDF 中文字体、
-LibreOffice 及本机其他 Office 程序，给出能力等级和补齐计划。**任何安装都会先征得你的同意**；依赖装在
-专用虚拟环境里，不会改动系统 Python。
-
-### 2. 命令行
+推荐在专用虚拟环境中从 [PyPI](https://pypi.org/project/acks-office/) 安装：
 
 ```bash
-pip install "acks-office @ https://github.com/shynloc/ACKS-Office-Suite-Simplify/archive/refs/tags/v2.1.0.zip"
+python -m pip install acks-office==2.1.1
+acks-office doctor --json
+```
 
-acks-office doctor                                   # 检查环境
-acks-office create word -o 报告.docx --title "2026 Q3 经营回顾" --content-file 正文.md
-acks-office create pdf  -o 报告.pdf  --title "2026 Q3 经营回顾" --content-file 正文.md
+升级到最新发行版：
+
+```bash
+python -m pip install --upgrade acks-office
+```
+
+下载开源中文字体需要字体可选依赖：
+
+```bash
+python -m pip install "acks-office[fonts]==2.1.1"
+acks-office fonts install noto-sans-sc
+```
+
+各系统虚拟环境、依赖、字体和 LibreOffice 的准备步骤见
+[安装指南](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/INSTALL_GUIDE.md)。
+也可从 [GitHub Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.1)
+下载 wheel 或技能包；功能不依赖发布渠道。
+
+## 三种入口
+
+### Agent 技能
+
+技能包由 `SKILL.md`、Python 入口脚本和程序代码组成，供支持技能规范及本地命令执行的 Agent 使用。
+宿主识别依据环境变量、目录等线索给出推测；接入方式与路径以宿主实际配置为准。
+
+1. 从 [GitHub Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.1)
+   下载 `acks-office-skill-2.1.1.zip`。
+2. 解压到宿主技能目录，得到 `acks-office/SKILL.md`。
+   Claude Code、Codex、OpenClaw、WorkBuddy、Hermes 的目录示例见安装指南。
+3. Agent 运行 `scripts/acks.py doctor --json`，说明补齐计划并取得用户同意后，
+   安装依赖到专用虚拟环境。入口脚本随后使用该环境。
+
+技能包含程序代码；依赖安装由 Agent 或用户执行，脚本本身不会自动安装。
+
+### 命令行
+
+子命令：`create`、`extract`、`convert`、`watermark`、`merge`、`fonts`、`doctor`、`version`。
+以下输入文件由用户准备，数据格式见
+[命令参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/commands.md)。
+
+```bash
+acks-office create word -o 报告.docx --title "经营回顾" --content-file 正文.md
+acks-office create pdf -o 报告.pdf --title "经营回顾" --content-file 正文.md
 acks-office create pptx -o 汇报.pptx --slides-file slides.json --brand-name "栖木咖啡"
 acks-office create excel -o 数据.xlsx --data-file data.csv
 acks-office extract 报告.docx
-acks-office convert 报告.docx --to pdf                # 需要 LibreOffice
+acks-office convert 报告.docx --to pdf -o 转换版.pdf
 acks-office watermark 报告.pdf --text "内部资料"
 acks-office merge a.pdf b.pdf -o 合并.pdf
-acks-office fonts install noto-sans-sc               # 下载开源中文字体（PDF 嵌入用）
 ```
 
-每个命令都可以加 `--json`，输出统一结构 `{"ok", "data", "artifacts", "warnings", "error"}`，
-退出码 0 成功、1 失败、2 参数错误；已有文件默认不覆盖（加 `--overwrite`）。完整说明见
-[命令参考](skills/acks-office/references/commands.md)。
+每个子命令可加 `--json`，返回 `{ok, data, artifacts, warnings, error}`；
+退出码 0 成功、1 执行失败、2 参数错误。默认不覆盖已有输出，需显式加 `--overwrite`。
+命令不在 PATH 上时，可用 `python -m acks_office`。
 
-### 3. Python 库
+### Python 库
 
 ```python
 from acks_office import OfficeSuite
 
-suite = OfficeSuite()  # 默认 theme="acks"
+suite = OfficeSuite(theme="acks")
+result = suite.create(
+    "word", title="经营回顾",
+    content="# 概览\n\n营收 **增长 24%**。\n\n"
+            "| 区域 | 营收 |\n|---|--:|\n| 华东 | 5888 |",
+    output_path="报告.docx", brand_name="",
+)
+if not result["success"]:
+    raise RuntimeError(result["error"])
 
-suite.create("word", title="2026 Q3 经营回顾", subtitle="营收、门店与会员",
-             content="# 经营概览\n\n营收 **1.28 亿元**，同比增长 24%。\n\n"
-                     "| 区域 | 营收（万元） |\n|---|--:|\n| 华东 | 5,888 |",
-             output_path="报告.docx", brand_name="")          # brand_name="" 去掉品牌
-
-suite.create("pdf", title="2026 Q3 经营回顾", content="…", output_path="报告.pdf")
-suite.create("pptx", title="经营回顾", output_path="汇报.pptx", brand_name="栖木咖啡",
-             slides=[{"title": "经营回顾", "subtitle": "2026 Q3", "layout": "title"},
-                     {"title": "核心结论", "content": "营收增长 24%\n会员 12 万"}])
-suite.create("excel", title="销售", data=[["部门", "1月"], ["一部", 150]], output_path="数据.xlsx")
-
-suite.extract_data("数据.xlsx")       # {"success": True, "data": [{"部门": "一部", "1月": 150}]}
-suite.convert("报告.docx", to="pdf")  # 需要 LibreOffice
+data = suite.extract_data("报告.docx")
 ```
 
-所有方法返回字典：成功时 `success` 为 True，并带输出路径等信息；失败时为 False 并附 `error`。
+`OfficeSuite` 的操作返回 `success`；失败时返回 `error`。检查返回值后再报告成功。
+底层格式模块可能直接抛出异常。Python API 与 CLI 的覆盖策略不同，见
+[安全说明](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/SECURITY.md)。
 
-## 主题与品牌
+PDF 拆分与 PPT 切换通过格式模块 API 调用：
 
-| 需求 | 做法 |
-|---|---|
-| 设计规范排版（默认） | `theme="acks"`：配色、字体、版式全部来自 `design_system/tokens.json` |
-| 朴素排版、便于他人二次编辑 | `theme="default"`：Word 内置样式 |
-| 去掉品牌 | `brand_name=""`：封面、页眉、页脚不出现任何品牌字样 |
-| 换成你的品牌 | `brand_name="品牌名"`，页脚文字可用 `footer_label` 指定 |
+```python
+from acks_office.pdf import split_pdf
+from acks_office.pptx import add_transition_effects
 
-3.0 将提供主题引擎：用一份主题文件描述你自己的设计规范，附带偏商务（Slate）与偏杂志（Folio）两套示例主题，
-并能由 Agent 引导你逐项创建。样张定稿的字体、配色与提示块样式见
-[设计参考](skills/acks-office/references/design-system.md#slate--folio-样张定稿)。
-
-## 字体
-
-- **PDF**：自动选择可嵌入的中文字体——参数 `font` → 环境变量 `ACKS_OFFICE_PDF_FONT` →
-  `fonts install` 下载的 Noto Sans SC → 系统自带（macOS 华文黑体、Windows 微软雅黑、Linux 文泉驿等）。
-  都没有时回退到不嵌入的 STSong-Light，并在结果里给出 `FONT_FALLBACK` 提醒。
-- **Word / PPT**：使用主题声明的字体名，打开文档的电脑缺字体时会被替换显示。`doctor` 会列出缺少的主题字体
-  及下载地址（均为可免费商用的开源字体）。
-
-## LibreOffice（可选）
-
-只有 `convert`（以及基于它的批量转换）需要。查找顺序：环境变量 `ACKS_OFFICE_SOFFICE` → PATH →
-各系统标准安装位置（如 macOS 的 `/Applications/LibreOffice.app`）。安装：
-
-```bash
-brew install --cask libreoffice                                # macOS
-winget install -e --id TheDocumentFoundation.LibreOffice       # Windows
-sudo apt-get install -y libreoffice                            # Ubuntu / Debian
+split_pdf("报告.pdf", "拆分页")
+add_transition_effects("汇报.pptx", "汇报_淡入.pptx", effect="fade", duration=0.5)
 ```
 
-## 从 2.0 升级
+PPT 切换支持 fade、push、wipe、split、cover、pull、dissolve、cut、zoom、random；
+时长参数映射为快 / 中 / 慢三档，实际播放由演示软件决定。
 
-- 导入名改为 `acks_office`；`import office_suite` 仍可用（会提示弃用），3.0 移除。
-- 段落内的单个换行保留为换行；封面标题不再重复；页脚、合并、PDF 字体等行为有调整，
-  详见 [CHANGELOG](CHANGELOG.md)。
+## 主题、品牌与字体
 
-## 目录结构
+- Word / PPT / Excel 的 `acks` 主题使用内置设计令牌，`default` 使用各格式的基础样式。
+- Word / PPT 在 `acks` 主题下支持 `brand_name`、`footer_label`；传 `brand_name=""` 去掉品牌字样。
+- PDF 使用独立的 ReportLab 排版，当前不会因为 `theme` 或品牌参数切换样式。
+- Word / PPT 写入字体名称，打开文件的电脑缺字体时由显示软件替换。
+- PDF 字体选择依次为参数 `font`、环境变量 `ACKS_OFFICE_PDF_FONT`、本工具下载的字体、可用系统字体。
+  能否嵌入以 doctor 检测为准，不能仅凭操作系统名称判断。
+  没有可用字体时回退到未嵌入的 STSong-Light，并返回 `FONT_FALLBACK`。
 
-```
-src/acks_office/
-├── core.py              OfficeSuite：统一入口、批量处理、工作流、邮件
-├── cli.py · doctor.py   命令行与环境检查
-├── docx.py · pdf.py · pptx.py · xlsx.py
-├── markdown_blocks.py   Markdown 解析（Word 与 PDF 共用）
-├── fonts.py · utils.py  字体选择与下载、LibreOffice 查找与转换
-└── design_system/       ACKS 设计规范（tokens.json 为唯一信源，来源见 SOURCE.md）
-skills/acks-office/      Agent 技能：SKILL.md、入口脚本、参考文档
-tools/build_skill_bundle.py   生成技能压缩包
-```
+正文写法见
+[Markdown 参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/markdown.md)，
+环境等级与字段见
+[doctor 参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/doctor.md)。
 
-## 开发
+## 工作流范围
+
+`OfficeSuite.execute_workflow(config)` 按顺序执行步骤，调度由调用方负责。
+加载 YAML 或使用 API 数据源时，可安装 `python -m pip install "acks-office[workflow]"`。
+示例见
+[workflow_example.yaml](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/examples/workflow_example.yaml)。
+
+当前不执行 `schedule`、`enabled`、`on_success`、`on_failure` 等根配置，也不读取 Word 模板文件；
+`retry` 顺序步骤只返回跳过，`notification` 只打印通知，不发送到 Slack / 企业微信。
+这些能力需要调用方自行实现。
+
+## 后续设计方向与兼容层
+
+自定义主题文件、Slate / Folio 主题、`theme init` / `theme preview` 属于后续规划，
+当前发行版没有这些入口。样张定稿见
+[设计参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/skills/acks-office/references/design-system.md)。
+后续功能是否上线，以代码、测试和变更记录为准。
+
+`import office_suite` 是仍可用的旧名兼容层，会发出弃用提示；新代码使用 `acks_office`。
+程序提供技能与 CLI，不包含内置 MCP 服务或邮件配置加密功能。
+
+## 验证与安全
+
+最低 Python 3.9；CI 覆盖 Ubuntu / macOS / Windows × Python 3.9 / 3.12。
+无 LibreOffice 的 runner 跳过实际转换测试，生成与读取测试仍运行。
+
+文档在本机处理。doctor 联网检查可用 `--no-network` 关闭；
+字体下载校验固定版本 SHA-256；SMTP 默认验证证书并拒绝明文登录。
+版本变化见
+[CHANGELOG](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/CHANGELOG.md)，
+安全与环境变量见
+[SECURITY.md](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/SECURITY.md)。
+
+## 开发与文档维护
 
 ```bash
 git clone https://github.com/shynloc/ACKS-Office-Suite-Simplify.git
 cd ACKS-Office-Suite-Simplify
 python -m pip install -e ".[dev]"
-python -m pytest                    # 单元测试
-python test_integration.py          # 集成测试
-python tools/build_skill_bundle.py  # 生成 dist/acks-office-skill-<版本>.zip
+python tools/check_release_docs.py
+python -m pytest
+python test_integration.py
+python tools/build_skill_bundle.py
 ```
 
-## 安全
+README 是 GitHub 与 PyPI 的共同说明来源。功能新增、移除或弃用时同步更新文档，
+将规划和可用功能分开，维护流程见
+[CONTRIBUTING.md](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/CONTRIBUTING.md)。
 
-文档全部在本机处理，不收集任何使用数据。联网只发生在：`doctor` 的连通性检查（可用 `--no-network` 关闭）、
-`fonts install` 下载字体（固定版本并校验 SHA-256）、`send_email` 连接你的邮件服务器（校验证书、
-拒绝明文登录），以及工作流里你自己配置的 API 数据源。
-详见 [SECURITY.md](SECURITY.md)。
-
-## 许可证
-
-[MIT](LICENSE)
-
----
-
-*设计思路受 [MiniMax](https://www.minimaxi.com/) Office Skill 启发，感谢其优秀的产品思路参考。*
+[MIT 许可证](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.1/LICENSE)。
+设计思路受 [MiniMax Office Skill](https://www.minimaxi.com/) 启发。

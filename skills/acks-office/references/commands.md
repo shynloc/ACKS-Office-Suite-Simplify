@@ -61,6 +61,8 @@ convert 文件 --to pdf [-o 输出路径] [--overwrite]
 `--to` 可为 pdf、docx、xlsx、pptx、odt 等。默认输出与原文件同名、换扩展名。
 LibreOffice 的查找顺序：环境变量 `ACKS_OFFICE_SOFFICE` → PATH 中的 soffice → 各系统标准安装位置。
 
+实际转换方向取决于 LibreOffice 的导入 / 导出过滤器，不保证任意两种格式都能互转。
+
 ## watermark：加水印
 
 ```

@@ -46,6 +46,7 @@ jobs:
           python-version: "3.12"
       - name: Build wheel, sdist and skill bundle
         run: |
+          python tools/check_release_docs.py
           python -m pip install build
           python -m build
           python tools/build_skill_bundle.py --out dist
