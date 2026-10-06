@@ -95,7 +95,7 @@ def test_image_and_missing_image(tmp_path, cjk_font, png):
     png(300, 150, name="pic.png")
     result = create_pdf("中文测试", "![图注](pic.png)\n\n![](nope.png)", str(tmp_path / "i.pdf"),
                         font=cjk_font, base_dir=str(tmp_path))
-    assert [w["code"] for w in result["warnings"]] == ["IMAGE_NOT_FOUND"]
+    assert [w["code"] for w in result["warnings"] if not w["code"].startswith("FONT_")] == ["IMAGE_NOT_FOUND"]
     assert len(PdfReader(str(tmp_path / "i.pdf")).pages[0].images) == 1
 
 

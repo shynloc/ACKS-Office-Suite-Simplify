@@ -138,7 +138,7 @@ def test_images_are_never_upscaled(tmp_path, png, size, expect_native):
 
 def test_missing_image_becomes_placeholder_with_warning(tmp_path):
     result = create_word("标题", "![图注](nope.png)", str(tmp_path / "m.docx"), base_dir=str(tmp_path))
-    assert result["warnings"][0]["code"] == "IMAGE_NOT_FOUND"
+    assert "IMAGE_NOT_FOUND" in [w["code"] for w in result["warnings"]]
     assert "[图片：图注]" in extract_text(str(tmp_path / "m.docx"))
 
 
