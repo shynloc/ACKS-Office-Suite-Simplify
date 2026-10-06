@@ -40,3 +40,58 @@ ACKS 是这套规范的出品方署名，也是一份**参照**：它示范了�
 - 两套示例主题：偏商务的 Slate（清晰、板正）与偏杂志的 Folio（大胆排版、强对比）；
 - 引导式创建：`theme init` 逐项询问并生成主题文件，`theme preview` 输出样张供确认；
 - 主题字体检测与安装：缺字体时推荐可商用的开源替代，并在用户同意后下载。
+
+## Slate / Folio 样张定稿
+
+以下设计目标依据「主题样张：Slate 与 Folio.html」整理（2026-10-06）。样张包括主题对照、
+PPT、Word 与 Excel 页面；其中的品牌、人物、日期和经营数据都是演示内容，不是主题默认值。
+Slate / Folio 与主题文件仍属于 **3.0 规划**，2.1.0 的可用主题仍为 `acks` / `default`。
+
+### 字体与排版
+
+| 用途 | Slate（商务） | Folio（杂志） |
+|---|---|---|
+| 中文标题与正文 | 思源黑体 / Source Han Sans | 思源宋体 / Source Han Serif |
+| 西文与数字 | Source Sans 3 | 标题、大号数字用 Fraunces；正文用衬线字体 |
+| 中文引文 | 沿用正文体系 | 霞鹜文楷 |
+| 排版特征 | 用字号与字重区分层级，颜色点睛；表格以横线分隔，数字右对齐 | 强字体对比、大留白、超大编号与数字；朱砂只强调关键内容 |
+
+样张内嵌字体使用 `QM Sans SC`、`QM Serif SC`、`QM Source Sans`、`QM Source Serif`、
+`QM Fraunces`、`QM WenKai` 等 CSS 别名。这些是样张的内部名称，不能直接拿来作为
+Word / PPT 的字体家族名。Slate 西文与数字的定稿字体是 **Source Sans 3**。
+
+### 配色
+
+| 用途 | Slate | Folio |
+|---|---|---|
+| 墨色 / 正文 | `#1F2933` | `#141414` |
+| 次要文字 | `#52606D` | `#5E5A54` |
+| 分隔线 | `#CBD2D9` | `#CBC6BC` |
+| 浅底 / 纸色 | `#F5F7FA` | `#F3F1EC` |
+| 强调色 | 钢蓝 `#1F5FAE` | 朱砂 `#C8321F` |
+| 深色章节底 | — | 靛青 `#1F2A44` |
+| 其他图表色 | `#4C9A8A`、`#C08A2E`、`#8B6BB1` | 按具体样张取值 |
+
+Folio 的常规 PPT 页以纸色为底，章节页以靛青为底、纸色文字反白；Word 与 Excel
+样张使用白底。纸色不是所有格式的统一页面背景。
+
+### 提示块
+
+Slate Word 正文样张的提示块采用浅底 `#F5F7FA`，纵向排列标签与正文；
+标签为钢蓝 `#1F5FAE`、粗体，保持矩形外观，没有左侧色条、圆角或阴影。
+样张 CSS 的内边距为上下 14 px、左右 16 px，标签与正文间距 4 px，标签字号 12 px。
+这些是 HTML 样张的尺寸；Word / PDF 实现时需转换为相应排版单位并渲染核对。
+Folio 正文中的文楷引文是引文样式，样张未单独定义 Folio 提示块。
+
+2.1.0 已支持 Markdown 提示块语法（见 [markdown.md](markdown.md)），
+但仍使用现有 ACKS / default 样式；上述 Slate 提示块外观是 3.0 的设计目标。
+
+## 2.1.0 已实现的 PPT 切换效果
+
+`acks_office.pptx.add_transition_effects` 已把每页的切换设置写入 PPTX：
+`fade`、`push`、`wipe`、`split`、`cover`、`pull`、`dissolve`、`cut`、`zoom`、`random`。
+再次设置会替换原有切换节点，不重复叠加；未知效果报错。
+
+`duration` 映射为快（≤ 0.5 秒）、中（≤ 1 秒）、慢三档，不是精确毫秒时长。
+该能力通过 Python API 调用，现有 CLI 没有切换效果子命令。
+测试验证 PPTX 中的切换节点；具体播放效果仍由演示软件决定。

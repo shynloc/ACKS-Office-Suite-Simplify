@@ -103,7 +103,8 @@ suite.convert("报告.docx", to="pdf")  # 需要 LibreOffice
 | 换成你的品牌 | `brand_name="品牌名"`，页脚文字可用 `footer_label` 指定 |
 
 3.0 将提供主题引擎：用一份主题文件描述你自己的设计规范，附带偏商务（Slate）与偏杂志（Folio）两套示例主题，
-并能由 Agent 引导你逐项创建。
+并能由 Agent 引导你逐项创建。样张定稿的字体、配色与提示块样式见
+[设计参考](skills/acks-office/references/design-system.md#slate--folio-样张定稿)。
 
 ## 字体
 
