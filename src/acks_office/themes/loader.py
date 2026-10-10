@@ -18,6 +18,7 @@ BUILTIN_DIR = Path(__file__).parent / "builtin"
 BASE = "_base"
 DEFAULT_THEME = "neutral"
 ALIASES = {"default": DEFAULT_THEME}  # 2.x 的 theme="default"（简单样式）在 3.0 起指中性主题
+REMOVED = {"acks": "2.x 内置的 acks 样式在 3.0 移出，需要另外安装 acks 主题包；也可以改用 neutral、slate、folio"}
 FILES = ("theme", "tokens", "fonts", "chrome")
 NAME = re.compile(r"^_?[a-z0-9][a-z0-9_-]{0,63}$")  # 以 _ 开头的是内部主题
 _CACHE: Dict[str, Theme] = {}
@@ -56,7 +57,7 @@ def _locate(ref: str, exclude: Set[Path] = frozenset()) -> Tuple[str, Path]:
         if (candidate / "theme.json").is_file() and candidate.resolve() not in exclude:
             return source, candidate.resolve()
     raise ThemeError("THEME_NOT_FOUND", f"找不到主题：{ref}",
-                     f"可用主题：{', '.join(_available())}；也可以传主题目录的路径")
+                     REMOVED.get(ref) or f"可用主题：{', '.join(_available())}；也可以传主题目录的路径")
 
 
 def _read_json(path: Path) -> Dict[str, Any]:

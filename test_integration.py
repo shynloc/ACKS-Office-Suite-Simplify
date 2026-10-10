@@ -49,8 +49,9 @@ def main():
 
     check("default is an alias of neutral", lambda: acks_office.create(
         "word", path("default.docx"), content=CONTENT, theme="default")["theme"] == "neutral")
-    check("acks style still available", lambda: acks_office.create(
-        "word", path("acks.docx"), title="测试", content="# 标题\n\n内容", theme="acks")["theme"] == "acks")
+    check("theme directory path", lambda: acks_office.create(
+        "word", path("path.docx"), content=CONTENT,
+        theme=os.path.join(os.path.dirname(acks_office.__file__), "themes", "builtin", "folio"))["theme"] == "folio")
     check("extract text (docx)", lambda: "正文内容" in acks_office.extract(path("slate.docx")))
     check("extract data (xlsx)", lambda: acks_office.extract(path("neutral.xlsx")) == [
         {"部门": "一部", "1月": 150, "2月": 140}, {"部门": "二部", "1月": 120, "2月": 130}])

@@ -97,10 +97,15 @@ def test_theme_by_path_with_relative_parent(tmp_path):
     assert load_theme(str(child / "theme.json")).name == "child"
 
 
-def test_missing_cyclic_and_broken_themes(tmp_path):
+def test_missing_cyclic_and_broken_themes(tmp_path, monkeypatch):
     with pytest.raises(ThemeError) as missing:
         load_theme("no-such-theme")
     assert missing.value.code == "THEME_NOT_FOUND" and "slate" in missing.value.hint
+    monkeypatch.setenv("ACKS_OFFICE_HOME", str(tmp_path / "home"))  # 本机装了 acks 主题包时也不受影响
+    monkeypatch.delenv("ACKS_OFFICE_THEMES", raising=False)
+    with pytest.raises(ThemeError) as removed:  # 2.x 内置的 acks 样式在 3.0 移出
+        load_theme("acks")
+    assert "3.0" in removed.value.hint
     with pytest.raises(ThemeError) as bad_name:
         load_theme("Bad Name")
     assert bad_name.value.code == "THEME_NOT_FOUND"

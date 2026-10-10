@@ -14,11 +14,8 @@ __version__ = acks_office.__version__
 __author__ = acks_office.__author__
 __all__ = ["OfficeSuite"]
 
-# 让 office_suite.xlsx、office_suite.design_system.tokens 等旧路径指向同一个模块对象
-for _name in ("core", "docx", "xlsx", "pdf", "pptx", "email", "utils",
-              "design_system", "design_system.tokens", "design_system.slides",
-              "design_system.xlsx", "design_system.tokens_constants",
-              "design_system.slides_constants", "design_system.xlsx_constants"):
+# 让 office_suite.xlsx 等旧路径指向同一个模块对象；2.x 的 office_suite.design_system 已在 3.0 移除
+for _name in ("core", "docx", "xlsx", "pdf", "pptx", "email", "utils"):
     _module = importlib.import_module(f"acks_office.{_name}")
     sys.modules[f"{__name__}.{_name}"] = _module
     if "." not in _name:

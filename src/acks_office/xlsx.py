@@ -1,12 +1,9 @@
 
 import datetime
-import os
 from typing import Optional, Union, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 import pandas as pd
-
-LEGACY_THEMES = ("acks",)  # 2.x 的 ACKS 样式；"default" 为 neutral 的别名
 
 
 def create_excel(title: Optional[str], data: Optional[List[Any]] = None, output_path: str = "",
@@ -22,9 +19,8 @@ def create_excel(title: Optional[str], data: Optional[List[Any]] = None, output_
         output_path: 输出路径
         create_chart: 是否生成图表（数值列默认取第一个数字列）
         theme: 主题名称（neutral、slate、folio 或已安装的主题）、主题目录或 Theme 对象；
-            "acks"、"default" 是 2.x 的内置样式
-        sheets: 多张工作表，每项 {name, title, header, rows, formats, total, highlight, note, chart}，
-            代替 data（需要主题，2.x 的内置样式不支持）
+            "default" 是 neutral 的别名
+        sheets: 多张工作表，每项 {name, title, header, rows, formats, total, highlight, note, chart}，代替 data
         sheet_name: 只有 data 时的工作表名，默认用标题
         font_policy: "local"（缺主题字体时改用本机字体，默认）或 "theme"（总是写主题字体名）
     """
@@ -33,39 +29,9 @@ def create_excel(title: Optional[str], data: Optional[List[Any]] = None, output_
         raise ValueError("需要 output_path（输出文件路径）")
     if data and all(isinstance(row, dict) for row in data):
         data = records_to_rows(data)
-    if isinstance(theme, str) and theme in LEGACY_THEMES:
-        if sheets is not None:
-            raise ValueError("多张工作表（sheets）需要主题，例如 theme=\"neutral\"；2.x 的内置样式只支持 data")
-        title = title or kwargs.get("sheet_name") or "Sheet1"
-        return _create_excel_acks(title, data or [], output_path, create_chart, **kwargs)
     from .render.sheet import render_sheets
     return render_sheets(title, output_path, data=data, sheets=sheets, theme=theme,
                          create_chart=create_chart, **kwargs)
-
-
-def _create_excel_acks(title: str, data: List[List[Any]], output_path: str,
-                       create_chart: bool, **kwargs) -> Dict[str, Any]:
-    """用 ACKS 设计规范（design_system.xlsx）生成 Excel。"""
-    from .design_system import xlsx as acks
-
-    wb = openpyxl.Workbook()
-    acks.register_named_styles(wb)
-    ws = wb.active
-    ws.title = title[:30]
-
-    headers = list(data[0]) if data else []
-    rows = [tuple(r) for r in data[1:]] if len(data) > 1 else []
-    acks.build_data_sheet(ws, headers=headers, rows=rows)
-
-    wb.save(output_path)
-
-    return {
-        "output_path": output_path,
-        "file_size": os.path.getsize(output_path),
-        "rows": len(data),
-        "columns": len(data[0]) if data else 0,
-        "theme": "acks",
-    }
 
 
 def extract_data(input_path: str, sheet_name: Optional[Union[str, int]] = None,

@@ -44,7 +44,7 @@ create {word|docx|pdf|excel|xlsx|pptx|ppt} -o 输出路径 [选项]
 `data` 含 `output_path`、`file_size`、`theme`，以及：PDF 的 `pages`（实际页数）与 `fonts`（嵌入的字体），
 PPT 的 `slides_count`，Excel 的 `sheets`（每张工作表的名称、行数、列数）。主题字体没装时有
 `FONT_SUBSTITUTED` 提醒（附 `install` 字体键，可用 `fonts install` 下载）；PDF 里中文没能嵌入时有
-`FONT_NOT_EMBEDDED`。`--theme acks` 是 2.x 保留的 ACKS 样式，只支持基础版式。
+`FONT_NOT_EMBEDDED`。
 
 ### Word / PDF 的 front matter
 

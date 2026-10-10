@@ -6,7 +6,7 @@ import pytest
 from docx import Document
 from docx.oxml.ns import qn
 
-from acks_office.docx import _footer_label, create_word, extract_text, merge_documents
+from acks_office.docx import create_word, extract_text, merge_documents
 
 TABLE = "| 区域 | 营收 |\n|---|--:|\n| 华东 | 5,888 |\n| 华南 | 3,456 |"
 
@@ -24,7 +24,7 @@ def _runs(doc):
             yield from getattr(r, "runs", [r])  # 链接里的文字在 Hyperlink.runs 里
 
 
-@pytest.mark.parametrize("theme", ["acks", "default"])
+@pytest.mark.parametrize("theme", ["default", "folio"])
 def test_inline_markdown_becomes_real_formatting(tmp_path, theme):
     out = tmp_path / "a.docx"
     create_word("标题", "普通 **粗体** *斜体* ~~删除~~ [链接](https://example.com/?a=1&b=2)", str(out), theme=theme)
@@ -38,7 +38,7 @@ def test_inline_markdown_becomes_real_formatting(tmp_path, theme):
     assert link.text == "链接" and link.address == "https://example.com/?a=1&b=2"
 
 
-@pytest.mark.parametrize("theme", ["acks", "default"])
+@pytest.mark.parametrize("theme", ["default", "folio"])
 def test_table_is_a_word_table_and_extracts_by_row(tmp_path, theme):
     out = tmp_path / "t.docx"
     create_word("标题", "前言\n\n" + TABLE + "\n\n结语", str(out), theme=theme)
@@ -56,7 +56,7 @@ def test_line_breaks_are_kept(tmp_path):
     assert "第一行\n第二行" in extract_text(str(out))
 
 
-def test_acks_cover_shows_title_once_with_subtitle(tmp_path):
+def test_cover_shows_title_once_with_subtitle(tmp_path):
     out = tmp_path / "c.docx"
     create_word("季度报告", "正文", str(out), subtitle="营收与会员")
     texts = [p.text for p in Document(str(out)).paragraphs]
@@ -77,17 +77,6 @@ def test_custom_brand_replaces_default(tmp_path):
     create_word("季度报告", "正文", str(out), brand_name="栖木咖啡")
     xml = _xml(out)
     assert "栖木咖啡" in xml and "ACKS" not in xml.upper()
-
-
-@pytest.mark.parametrize("brand, label, expected", [
-    ("ACKS Studio", None, "ACKS Studio · 文档设计规范 v2"),
-    ("栖木咖啡", None, "栖木咖啡"),
-    ("", None, "季度报告"),
-    ("栖木咖啡", "内部资料", "内部资料"),
-    ("栖木咖啡", "", ""),
-])
-def test_footer_label_rules(brand, label, expected):
-    assert _footer_label("季度报告", brand, label) == expected
 
 
 def _num_ids(doc):

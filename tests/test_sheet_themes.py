@@ -189,8 +189,6 @@ def test_values_are_cleaned_and_bad_highlights_warn(tmp_path):
     assert [w["code"] for w in result["warnings"]].count("BAD_HIGHLIGHT") == 2
     with pytest.raises(ValueError):
         create_excel(None, None, str(tmp_path / "e.xlsx"), theme="neutral", sheets=[])
-    with pytest.raises(ValueError):
-        create_excel(None, None, str(tmp_path / "f.xlsx"), theme="acks", sheets=[spec])
 
 
 def test_extract_detects_a_title_row(tmp_path):
@@ -210,7 +208,7 @@ def test_extract_detects_a_title_row(tmp_path):
     assert extract_data(str(single)) == [{"名称": "甲"}, {"名称": "乙"}]
 
 
-def test_cli_records_sheets_and_legacy_limits(tmp_path, capsys, monkeypatch):
+def test_cli_records_and_sheets(tmp_path, capsys, monkeypatch):
     monkeypatch.chdir(tmp_path)
     records = [{"名称": "甲", "数量": 1}, {"名称": "乙", "单价": 2.5}]
     (tmp_path / "r.json").write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
@@ -227,19 +225,13 @@ def test_cli_records_sheets_and_legacy_limits(tmp_path, capsys, monkeypatch):
     assert env["data"]["theme"] == "slate" and env["data"]["sheets"][0]["name"] == "A"
     assert openpyxl.load_workbook(tmp_path / "s.xlsx").properties.title == "经营数据"
 
-    # 2.x 的内置样式只支持二维数组；格式不对的 sheets 报 INVALID_INPUT
-    assert main(["create", "xlsx", "-o", "x.xlsx", "--data-file", "s.json", "--theme", "acks", "--json"]) == 1
-    assert json.loads(capsys.readouterr().out)["error"]["code"] == "INVALID_INPUT"
+    # 格式不对的 sheets 报 INVALID_INPUT
     (tmp_path / "bad.json").write_text(json.dumps({"sheets": [{"rows": "x"}]}), encoding="utf-8")
     assert main(["create", "xlsx", "-o", "y.xlsx", "--data-file", "bad.json", "--theme", "slate", "--json"]) == 1
     assert json.loads(capsys.readouterr().out)["error"]["code"] == "INVALID_INPUT"
 
 
-def test_acks_excel_unchanged_and_default_is_neutral(tmp_path):
-    out = tmp_path / "acks.xlsx"
-    result = create_excel("销售", DATA, str(out), theme="acks")
-    assert result["theme"] == "acks" and result["rows"] == len(DATA)
-    assert _sheet(out)["A1"].value == "区域"
+def test_default_excel_theme_is_neutral(tmp_path):
     for theme in (None, "default"):  # 3.0 起默认主题是 neutral，default 是它的别名
         result = create_excel("销售", DATA, str(tmp_path / f"{theme}.xlsx"), theme=theme)
         assert result["theme"] == "neutral" and _sheet(tmp_path / f"{theme}.xlsx")["A1"].value == "销售"

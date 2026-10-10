@@ -1,11 +1,9 @@
-import os
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from pptx import Presentation
 from pptx.oxml import parse_xml
 from pptx.oxml.ns import nsdecls, qn
 
-DEFAULT_BRAND = "ACKS Studio"
 TRANSITIONS = ("fade", "push", "wipe", "split", "cover", "pull", "dissolve", "cut", "zoom", "random")
 
 
@@ -20,18 +18,14 @@ def create_pptx(title: str, slides: List[Dict[str, Any]], output_path: str,
         title: 演示文稿标题
         slides: 幻灯片列表。每页一个字典，layout 为 title（封面）、section（章节页）、content（内容页，
             content 或 bullets）、data（关键数字 kpis + 条形图 chart）、table（表格）、number（大数字）、
-            quote（引文）、image（图片），其余字段见命令参考；acks / default 只认 title 与 content
+            quote（引文）、image（图片），其余字段见命令参考
         output_path: 输出路径
         theme: 主题名称（neutral、slate、folio 或已安装的主题）、主题目录或 Theme 对象；
-            "acks"、"default" 是 2.x 的内置样式
+            "default" 是 neutral 的别名
         brand_name: 品牌名，传 "" 去品牌化
         footer_label: 页脚左侧文字，默认按主题模板生成
-        meta_right: 标题页右上角文字（theme="acks" 生效）
         其余关键字参数（kicker、classification、publication、issue、season、date、author 等）作为元数据
     """
-    if theme == "acks":  # 2.x 的 ACKS 样式
-        brand = DEFAULT_BRAND if brand_name is None else brand_name
-        return _create_pptx_acks(title, slides, output_path, brand, **kwargs)
     from .render.slides import render_slides
     options = ("base_dir", "font_policy", "footer_label")
     meta = {k: v for k, v in kwargs.items() if k not in options}
@@ -40,51 +34,6 @@ def create_pptx(title: str, slides: List[Dict[str, Any]], output_path: str,
     return render_slides(title, slides, output_path, theme=theme, base_dir=kwargs.get("base_dir"),
                          font_policy=kwargs.get("font_policy", "local"), footer_label=kwargs.get("footer_label"),
                          **meta)
-
-
-def _create_pptx_acks(title: str, slides: List[Dict[str, Any]], output_path: str,
-                      brand_name: str, **kwargs) -> Dict[str, Any]:
-    """用 ACKS 设计规范（design_system.slides）生成 PPT。"""
-    from .design_system import slides as acks
-    from .docx import _is_cjk
-
-    prs = acks.init_presentation()
-    acks.set_brand(prs, name=brand_name, footer_label=kwargs.get("footer_label"))
-    meta_right = kwargs.get("meta_right", "CONFIDENTIAL · 2026" if brand_name == DEFAULT_BRAND else "")
-
-    for idx, slide_data in enumerate(slides, start=1):
-        layout = slide_data.get("layout", "content")
-        s_title = slide_data.get("title", "") or title
-        s_content = slide_data.get("content", "")
-        subtitle = slide_data.get("subtitle", "")
-
-        if layout == "title":
-            if _is_cjk(s_title):
-                acks.add_title_slide(prs, doctype="", title_top="", title_em=s_title,
-                                     zh_sub=subtitle, meta_right=meta_right)
-            else:
-                acks.add_title_slide(prs, doctype="", title_top=s_title, title_em="",
-                                     zh_sub=subtitle, meta_right=meta_right)
-        else:
-            paragraphs = [ln.strip() for ln in s_content.split('\n') if ln.strip()] or [""]
-            acks.add_content_slide(
-                prs,
-                eyebrow=brand_name,
-                title_en=s_title,
-                title_zh=subtitle,
-                paragraphs=paragraphs,
-                page_no=idx,
-            )
-
-    acks.finalize_footers(prs)
-    prs.save(output_path)
-
-    return {
-        "output_path": output_path,
-        "file_size": os.path.getsize(output_path),
-        "slides_count": len(prs.slides),
-        "theme": "acks",
-    }
 
 
 def add_transition_effects(input_path: str, output_path: Optional[str] = None, effect: str = "fade",

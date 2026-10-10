@@ -3,7 +3,7 @@
 格式参照 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [3.0.0] - 2026-10-07
+## [3.0.0] - 2026-10-10
 
 主题引擎：设计从写死的常量变成运行时加载的主题包，同一套引擎按主题出品 Word、PDF、PPT、Excel。
 升级说明见 [迁移指南](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v3.0.0/docs/migration-3.0.md)。
@@ -11,7 +11,9 @@
 ### 不兼容变更
 
 - **默认主题改为 `neutral`**（中性、只用系统字体、不带品牌）。`theme="default"` 成为 `neutral` 的别名，
-  2.x 的「简单样式」随之移除；`theme="acks"` 暂时保留 2.x 的 ACKS 样式，只支持基础版式。
+  2.x 的「简单样式」随之移除。
+- **ACKS 样式移出开源仓库**：`theme="acks"` 不再内置，`acks_office.design_system` 与 `office_suite.design_system`
+  一并移除；ACKS 品牌改为单独安装的 `acks` 主题包。
 - **函数式接口** `acks_office.create / extract / convert / add_watermark / merge`：出错时抛出异常，
   不再返回 `{"success": False}`。`OfficeSuite` 与 `office_suite` 导入名保留到 4.0，使用时提示弃用。
 - **不覆盖原文件**：`add_watermark` 默认写到 `<原名>_watermarked.<扩展名>`，`add_transition_effects`

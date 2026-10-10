@@ -13,9 +13,11 @@
 |---|---|
 | 不传 `theme` 时为 `acks`（ACKS 品牌样式） | 不传时为 `neutral`：中性配色、系统字体、不带品牌 |
 | `theme="default"`：各格式的简单样式 | `default` 是 `neutral` 的别名 |
-| `theme="acks"` | 暂时保留 2.x 的 ACKS 样式，只支持基础版式 |
+| `theme="acks"` | 不再内置，改为单独安装的 `acks` 主题包；没装时报 `THEME_NOT_FOUND` |
 
-需要旧样式时显式传 `theme="acks"`（CLI：`--theme acks`）。新文档建议改用 `slate` 或自己的主题：
+2.x 的 ACKS 设计规范代码（`acks_office.design_system`、`office_suite.design_system`）一并移除。
+ACKS 品牌改由 `acks` 主题包提供，用 `ACKS_OFFICE_THEMES` 指向主题包所在目录，或复制到用户主题目录后，
+照常传 `theme="acks"`（CLI：`--theme acks`）。其他品牌建议改用 `slate` 或自己的主题：
 `acks-office theme init 品牌名 --extends slate --accent "#色值" --brand "品牌"`。
 
 ### 2. 函数式接口取代 OfficeSuite
@@ -78,8 +80,9 @@ or your own theme. Most calls keep working, but the default look, some return va
 file-writing defaults changed.
 
 1. **Default theme is `neutral`** (neutral colors, system fonts, no brand). `theme="default"` is now an
-   alias of `neutral`; the 2.x "simple" style is gone. `theme="acks"` keeps the 2.x ACKS style for now
-   (basic layouts only). Create your own with `acks-office theme init my-brand --extends slate`.
+   alias of `neutral`; the 2.x "simple" style is gone. The built-in ACKS style and `acks_office.design_system` are removed;
+   the ACKS brand is now a separate `acks` theme package (point `ACKS_OFFICE_THEMES` at its folder or copy
+   it into the user theme directory). Create your own with `acks-office theme init my-brand --extends slate`.
 2. **Function API**: `acks_office.create(kind, output_path, **kwargs)`, `extract`, `convert`,
    `add_watermark` and `merge` raise exceptions (`FileNotFoundError`, `ValueError`, `ThemeError`)
    instead of returning `{"success": False}`. `OfficeSuite` and `import office_suite` still work until

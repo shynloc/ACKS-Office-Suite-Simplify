@@ -132,7 +132,7 @@ add_transition_effects("汇报.pptx", "汇报_淡入.pptx", effect="fade", durat
   （地址固定、校验哈希），`--system` 同时装到当前用户的字体目录。
 - PDF 的中文字体依次取 `--font` / `ACKS_OFFICE_PDF_FONT`、主题字体及其备选、同风格的系统 TrueType 字体，
   都没有时用阅读器自带的 STSong-Light（不嵌入）。能否嵌入以 doctor 检测为准。
-- `theme="acks"` 暂时保留 2.x 的 ACKS 样式，只支持基础版式；`theme="default"` 是 `neutral` 的别名。
+- `theme="default"` 是 `neutral` 的别名。2.x 内置的 ACKS 样式已移出，改为单独安装的主题包。
 
 正文写法见
 [Markdown 参考](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v3.0.0/skills/acks-office/references/markdown.md)，

@@ -161,9 +161,8 @@ def cmd_create(args) -> Dict:
         raise CliError("INVALID_INPUT", f"输出文件应以 {suffix} 结尾：{args.output}",
                        f"例如 -o {Path(args.output).stem or '输出'}{suffix}")
     _check_output(args.output, args.overwrite)
-    if args.theme != "acks":
-        from .themes import load_theme
-        load_theme(args.theme)  # 主题不存在时直接报 THEME_NOT_FOUND
+    from .themes import load_theme
+    load_theme(args.theme)  # 主题不存在时直接报 THEME_NOT_FOUND
     kwargs: Dict[str, Any] = {"output_path": args.output, "font_policy": args.font_policy}
     for key in ("brand_name", "footer_label", "subtitle"):
         if getattr(args, key) is not None:
@@ -189,9 +188,6 @@ def cmd_create(args) -> Dict:
             raise CliError("INVALID_INPUT", "生成 Excel 需要 --data-file（JSON 二维数组、对象数组、{\"sheets\": [...]} 或 CSV）")
         data, sheets, table_meta = _load_table(args.data_file)
         if sheets is not None:
-            if args.theme == "acks":
-                raise CliError("INVALID_INPUT", "多张工作表需要主题，2.x 的 ACKS 样式只支持二维数组",
-                               "去掉 --theme acks，或改用 neutral、slate、folio")
             kwargs["sheets"] = sheets
         else:
             kwargs["data"] = data
@@ -211,7 +207,7 @@ def cmd_create(args) -> Dict:
             elif key != "title":
                 kwargs.setdefault(key, value)
 
-    if kind == "excel" and args.theme != "acks":
+    if kind == "excel":
         # 表格的标题写在第 1 行：没给标题就不加标题行，工作表名用文件名
         kwargs["title"] = title or kwargs.get("title")
         kwargs.setdefault("sheet_name", Path(args.output).stem)

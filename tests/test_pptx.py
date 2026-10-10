@@ -24,19 +24,13 @@ def _texts(path):
 def deck(tmp_path):
     def make(**kwargs):
         out = tmp_path / "deck.pptx"
-        kwargs.setdefault("theme", "acks")  # 这些用例针对 2.x 的 ACKS 样式
         create_pptx("演示", SLIDES, str(out), **kwargs)
         return out
     return make
 
 
-def test_acks_brand_is_kept(deck):
-    flat = "\n".join(t for slide in _texts(deck()) for t in slide)
-    assert "ACKS STUDIO" in flat and "CONFIDENTIAL" in flat
-
-
 def test_default_theme_has_no_brand(deck):
-    flat = "\n".join(t for slide in _texts(deck(theme=None)) for t in slide)
+    flat = "\n".join(t for slide in _texts(deck()) for t in slide)
     assert "ACKS" not in flat and "CONFIDENTIAL" not in flat
 
 
