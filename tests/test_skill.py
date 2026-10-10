@@ -99,7 +99,7 @@ def test_bundle_contains_skill_and_code(tmp_path):
     names = zipfile.ZipFile(bundle).namelist()
     for required in ("acks-office/SKILL.md", "acks-office/LICENSE", "acks-office/scripts/acks.py",
                      "acks-office/references/commands.md", "acks-office/lib/acks_office/__init__.py",
-                     "acks-office/lib/acks_office/design_system/tokens.json"):
+                     "acks-office/lib/acks_office/themes/builtin/slate/tokens.json"):
         assert required in names
     assert not [n for n in names if "__pycache__" in n or "/tests/" in n or n.endswith(".pyc")]
     assert not [n for n in names if n.startswith("acks-office/lib/office_suite")]

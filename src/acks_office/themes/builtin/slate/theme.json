@@ -1,0 +1,9 @@
+{
+  "schema": "acks-office-theme/1",
+  "name": "slate",
+  "title": "Slate 石板",
+  "description": "商务：清晰、简明、易读，格式板正。层级交给字重和字号，颜色只做点睛；表格只用横线，数字右对齐。",
+  "version": "1.0.0",
+  "author": "ACKS Studio",
+  "license": "MIT"
+}

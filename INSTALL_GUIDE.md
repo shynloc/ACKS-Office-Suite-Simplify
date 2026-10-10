@@ -1,17 +1,17 @@
 # 安装指南
 
-文档对应版本：**2.1.2**。
+文档对应版本：**3.0.0**。
 
 ## 系统要求
 
-- Python 3.9 或更高；CI 验证 Python 3.9 / 3.12。
+- Python 3.10 或更高；CI 验证 Python 3.10 / 3.13。macOS 自带的 Python 3.9 需另装新版。
 - macOS、Windows、Linux；生成与读取不需要 Microsoft Office 或 WPS。
 - LibreOffice 用于转换；字体是否可用，以 doctor 检测结果为准。
 
 ## Agent 技能
 
-从 [2.1.2 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.2)
-下载 `acks-office-skill-2.1.2.zip`，解压到宿主实际配置的技能目录，得到 `acks-office/SKILL.md`。
+从 [3.0.0 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v3.0.0)
+下载 `acks-office-skill-3.0.0.zip`，解压到宿主实际配置的技能目录，得到 `acks-office/SKILL.md`。
 
 目录示例：Claude Code `~/.claude/skills/`、Codex `~/.codex/skills/`、
 OpenClaw `~/.openclaw/skills/` 或工作区 `skills/`、WorkBuddy `~/.workbuddy/skills/`、
@@ -31,7 +31,7 @@ macOS / Linux：
 
 ```bash
 python3 -m venv ~/.venvs/acks-office
-~/.venvs/acks-office/bin/python -m pip install acks-office==2.1.2
+~/.venvs/acks-office/bin/python -m pip install acks-office==3.0.0
 ~/.venvs/acks-office/bin/acks-office doctor --json
 ```
 
@@ -39,7 +39,7 @@ Windows PowerShell：
 
 ```powershell
 py -3 -m venv "$env:LOCALAPPDATA\acks-office-cli"
-& "$env:LOCALAPPDATA\acks-office-cli\Scripts\python.exe" -m pip install acks-office==2.1.2
+& "$env:LOCALAPPDATA\acks-office-cli\Scripts\python.exe" -m pip install acks-office==3.0.0
 & "$env:LOCALAPPDATA\acks-office-cli\Scripts\acks-office.exe" doctor --json
 ```
 
@@ -53,8 +53,8 @@ python -m acks_office doctor --json
 可选依赖：
 
 ```bash
-python -m pip install "acks-office[fonts]==2.1.2"
-python -m pip install "acks-office[workflow]==2.1.2"
+python -m pip install "acks-office[fonts]==3.0.0"
+python -m pip install "acks-office[workflow]==3.0.0"
 ```
 
 系统 Python 提示 `externally-managed-environment` 时使用虚拟环境。
@@ -62,11 +62,11 @@ python -m pip install "acks-office[workflow]==2.1.2"
 
 ## GitHub wheel 与源码
 
-从 [2.1.2 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v2.1.2)
+从 [3.0.0 Release](https://github.com/shynloc/ACKS-Office-Suite-Simplify/releases/tag/v3.0.0)
 下载 wheel，在专用环境安装：
 
 ```bash
-python -m pip install ./acks_office-2.1.2-py3-none-any.whl
+python -m pip install ./acks_office-3.0.0-py3-none-any.whl
 ```
 
 源码开发：
@@ -84,16 +84,18 @@ python test_integration.py
 
 ## 字体与转换
 
-不能仅凭操作系统判断中文字体可嵌入。doctor 的 `fonts.pdf_cjk.embedded` 为 false 时，
-在用户同意后下载开源中文字体：
+主题字体没装时，生成文件会改用本机的备选字体（结果里有 `FONT_SUBSTITUTED` 提醒）。
+`doctor` 与 `fonts list` 按主题列出缺的字体；在用户同意后下载主题用到的开源字体：
 
 ```bash
-python -m pip install "acks-office[fonts]==2.1.2"
-acks-office fonts install noto-sans-sc
+python -m pip install "acks-office[fonts]==3.0.0"
+acks-office fonts install --theme slate            # 装进用户数据目录，生成 PDF 时嵌入
+acks-office fonts install --theme slate --system   # 同时装到当前用户的字体目录，Word / PPT 也能用
 ```
 
-也可用 `--font` / `ACKS_OFFICE_PDF_FONT` 指定包含中文字形的 TrueType `.ttf` / `.ttc`。
-Word / PPT 使用主题字体名，缺字体时由打开文档的软件替换显示。
+字体地址固定到具体版本并校验哈希，均为 SIL OFL 1.1，可免费商用；不需要管理员权限。
+PDF 只能嵌入 TrueType 字体，不能仅凭操作系统判断中文字体可嵌入，以 doctor 的
+`fonts.pdf_cjk.embedded` 为准；也可用 `--font` / `ACKS_OFFICE_PDF_FONT` 指定包含中文字形的 `.ttf` / `.ttc`。
 
 需要转换时，按系统选择对应 LibreOffice 安装命令：
 
@@ -111,12 +113,13 @@ sudo dnf install -y libreoffice                          # Fedora / OpenCloudOS
 
 运行 `acks-office doctor --json` 查看报告与补齐计划。
 `none` 表示 Python / 基础依赖不满足，`L0` 表示基础依赖齐全，
-`L1` 还要求 PDF 嵌入字体和主题字体齐全，`L2` 还要求 LibreOffice 可调用。
+`L1` 还要求 PDF 嵌入字体和默认主题的字体齐全，`L2` 还要求 LibreOffice 可调用。
 这些是环境检查等级，不保证所有阅读器中的显示完全一致。
 
 - PDF 字体缺失：查看 `fonts.pdf_cjk`，按计划补齐；扫描图片文字需要外部 OCR。
 - `ENGINE_UNAVAILABLE`：准备 LibreOffice，或直接生成目标格式。
 - 国内包镜像可能滞后于 PyPI，刚发布版本可使用官方索引。字体镜像用
-  `ACKS_OFFICE_DOWNLOAD_MIRROR` 配置，仍验证 SHA-256。
-- 从旧版升级：`office_suite` 兼容层仍可用，新代码用 `acks_office`。
-  变化见 [CHANGELOG](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/CHANGELOG.md)。
+  `ACKS_OFFICE_DOWNLOAD_MIRROR` 配置，仍校验哈希。
+- 从 2.x 升级：默认主题改为 neutral，Python 接口改为函数，加水印与合并的默认行为也有变化，见
+  [迁移指南](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v3.0.0/docs/migration-3.0.md) 与
+  [CHANGELOG](https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v3.0.0/CHANGELOG.md)。

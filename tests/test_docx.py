@@ -6,7 +6,7 @@ import pytest
 from docx import Document
 from docx.oxml.ns import qn
 
-from acks_office.docx import _footer_label, create_word, extract_text, merge_documents
+from acks_office.docx import create_word, extract_text, merge_documents
 
 TABLE = "| 区域 | 营收 |\n|---|--:|\n| 华东 | 5,888 |\n| 华南 | 3,456 |"
 
@@ -24,7 +24,7 @@ def _runs(doc):
             yield from getattr(r, "runs", [r])  # 链接里的文字在 Hyperlink.runs 里
 
 
-@pytest.mark.parametrize("theme", ["acks", "default"])
+@pytest.mark.parametrize("theme", ["default", "folio"])
 def test_inline_markdown_becomes_real_formatting(tmp_path, theme):
     out = tmp_path / "a.docx"
     create_word("标题", "普通 **粗体** *斜体* ~~删除~~ [链接](https://example.com/?a=1&b=2)", str(out), theme=theme)
@@ -38,7 +38,7 @@ def test_inline_markdown_becomes_real_formatting(tmp_path, theme):
     assert link.text == "链接" and link.address == "https://example.com/?a=1&b=2"
 
 
-@pytest.mark.parametrize("theme", ["acks", "default"])
+@pytest.mark.parametrize("theme", ["default", "folio"])
 def test_table_is_a_word_table_and_extracts_by_row(tmp_path, theme):
     out = tmp_path / "t.docx"
     create_word("标题", "前言\n\n" + TABLE + "\n\n结语", str(out), theme=theme)
@@ -56,7 +56,7 @@ def test_line_breaks_are_kept(tmp_path):
     assert "第一行\n第二行" in extract_text(str(out))
 
 
-def test_acks_cover_shows_title_once_with_subtitle(tmp_path):
+def test_cover_shows_title_once_with_subtitle(tmp_path):
     out = tmp_path / "c.docx"
     create_word("季度报告", "正文", str(out), subtitle="营收与会员")
     texts = [p.text for p in Document(str(out)).paragraphs]
@@ -77,17 +77,6 @@ def test_custom_brand_replaces_default(tmp_path):
     create_word("季度报告", "正文", str(out), brand_name="栖木咖啡")
     xml = _xml(out)
     assert "栖木咖啡" in xml and "ACKS" not in xml.upper()
-
-
-@pytest.mark.parametrize("brand, label, expected", [
-    ("ACKS Studio", None, "ACKS Studio · 文档设计规范 v2"),
-    ("栖木咖啡", None, "栖木咖啡"),
-    ("", None, "季度报告"),
-    ("栖木咖啡", "内部资料", "内部资料"),
-    ("栖木咖啡", "", ""),
-])
-def test_footer_label_rules(brand, label, expected):
-    assert _footer_label("季度报告", brand, label) == expected
 
 
 def _num_ids(doc):
@@ -112,12 +101,12 @@ def test_default_theme_restarts_each_ordered_list(tmp_path):
     assert starts == {"一": "1", "二": "1", "三": "1", "四": "1", "从三开始": "3"}
 
 
-def test_default_theme_task_items_have_only_a_checkbox(tmp_path):
+def test_task_items_have_only_a_checkbox(tmp_path):
     out = tmp_path / "k.docx"
-    create_word("标题", "- [ ] 待办\n- [x] 完成", str(out), theme="default")
+    create_word("标题", "- [ ] 待办\n- [x] 完成", str(out), theme="default")  # default 即 neutral
     items = [p for p in Document(str(out)).paragraphs if p.text.endswith(("待办", "完成"))]
     assert [p.text for p in items] == ["☐ 待办", "☑ 完成"]
-    assert all(p.style.name == "List Paragraph" and p._p.pPr.numPr is None for p in items)
+    assert all(p._p.pPr.numPr is None for p in items)
 
 
 @pytest.mark.parametrize("size, expect_native", [((120, 60), True), ((4000, 1000), False)])
@@ -138,20 +127,23 @@ def test_images_are_never_upscaled(tmp_path, png, size, expect_native):
 
 def test_missing_image_becomes_placeholder_with_warning(tmp_path):
     result = create_word("标题", "![图注](nope.png)", str(tmp_path / "m.docx"), base_dir=str(tmp_path))
-    assert result["warnings"][0]["code"] == "IMAGE_NOT_FOUND"
+    assert "IMAGE_NOT_FOUND" in [w["code"] for w in result["warnings"]]
     assert "[图片：图注]" in extract_text(str(tmp_path / "m.docx"))
 
 
-def test_merge_keeps_images_and_reports_skipped(tmp_path, png):
+def test_merge_keeps_images_and_refuses_missing_files(tmp_path, png):
     image = png(200, 100, name="pic.png")
     first, second, merged = tmp_path / "1.docx", tmp_path / "2.docx", tmp_path / "merged.docx"
     create_word("第一份", "第一份正文", str(first), theme="default")
     create_word("第二份", "第二份正文\n\n![图](pic.png)\n\n[链接](https://example.com)", str(second),
                 theme="default", base_dir=str(tmp_path))
 
-    result = merge_documents([str(first), str(tmp_path / "missing.docx"), str(second)], str(merged))
+    with pytest.raises(FileNotFoundError):  # 3.0：缺文件直接报错，不会只合并一部分
+        merge_documents([str(first), str(tmp_path / "missing.docx"), str(second)], str(merged))
+    assert not merged.exists()
+    result = merge_documents([str(first), str(second)], str(merged))
 
-    assert result["merged_count"] == 2 and result["skipped"] == [str(tmp_path / "missing.docx")]
+    assert result["merged_count"] == 2 and "skipped" not in result
     doc = Document(str(merged))
     text = extract_text(str(merged))
     assert text.index("第一份正文") < text.index("第二份正文")

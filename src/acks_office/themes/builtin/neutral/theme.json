@@ -1,0 +1,9 @@
+{
+  "schema": "acks-office-theme/1",
+  "name": "neutral",
+  "title": "Neutral 中性",
+  "description": "默认主题：不带品牌，黑灰加一个蓝色强调，只用系统字体，任何环境都能出品。",
+  "version": "1.0.0",
+  "author": "ACKS Studio",
+  "license": "MIT"
+}

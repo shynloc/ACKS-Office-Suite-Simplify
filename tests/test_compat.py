@@ -25,10 +25,7 @@ def test_old_submodule_paths_point_to_new_modules():
     with pytest.warns(DeprecationWarning):
         _fresh_import("office_suite")
     from office_suite.xlsx import extract_data
-    from office_suite.design_system.tokens import add_cover_page
     import acks_office.xlsx
-    import acks_office.design_system.tokens
 
     assert extract_data is acks_office.xlsx.extract_data
-    assert add_cover_page is acks_office.design_system.tokens.add_cover_page
     assert sys.modules["office_suite.docx"] is sys.modules["acks_office.docx"]

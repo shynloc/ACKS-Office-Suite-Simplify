@@ -47,7 +47,8 @@ def test_create_word_from_file_and_refuse_to_overwrite(run, tmp_path, png):
     (tmp_path / "正文.md").write_text("# 概述\n\n**重点**\n\n![图](pic.png)", encoding="utf-8")
 
     code, env = run("create", "word", "-o", "报告.docx", "--content-file", "正文.md", "--brand-name", "")
-    assert code == 0 and env["ok"] and not env["warnings"]  # 图片按正文文件所在目录找到
+    # 图片按正文文件所在目录找到（字体提醒取决于本机装了哪些字体，不计入）
+    assert code == 0 and env["ok"] and not [w for w in env["warnings"] if not w["code"].startswith("FONT_")]
     (artifact,) = env["artifacts"]
     assert Path(artifact["path"]) == (tmp_path / "报告.docx").resolve() and artifact["size"] > 0
 
@@ -143,8 +144,9 @@ def test_merge_rules(run, tmp_path):
     run("create", "pdf", "-o", "a.pdf", "--content", "甲")
     run("create", "word", "-o", "b.docx", "--content", "乙")
 
-    code, env = run("merge", "a.pdf", "missing.pdf", "-o", "m.pdf")
-    assert code == 0 and [w["code"] for w in env["warnings"]] == ["INPUT_SKIPPED"]
+    code, env = run("merge", "a.pdf", "missing.pdf", "-o", "m.pdf")  # 3.0：缺文件直接报错，不再只合并一部分
+    assert code == 1 and env["error"]["code"] == "FILE_NOT_FOUND" and "missing.pdf" in env["error"]["message"]
+    assert not (tmp_path / "m.pdf").exists()
     assert run("merge", "missing1.pdf", "missing2.pdf", "-o", "n.pdf")[1]["error"]["code"] == "FILE_NOT_FOUND"
     assert run("merge", "a.pdf", "b.docx", "-o", "x.pdf")[1]["error"]["code"] == "UNSUPPORTED_FORMAT"
 

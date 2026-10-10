@@ -20,7 +20,7 @@ from . import __version__, fonts
 from .utils import data_dir, find_soffice
 
 SCHEMA = "doctor/1"
-MIN_PYTHON = (3, 9)
+MIN_PYTHON = (3, 10)
 # (发行包, 导入名, 版本要求)：与 pyproject.toml 的 dependencies 保持一致（有测试核对）
 DEPENDENCIES = [("python-docx", "docx", ">=1.1.0"), ("openpyxl", "openpyxl", ">=3.1.2"),
                 ("python-pptx", "pptx", ">=0.6.23"), ("reportlab", "reportlab", ">=4.0.0"),
@@ -217,10 +217,6 @@ def _writable(path: Path) -> bool:
     return False
 
 
-def _google_fonts_link(family: str) -> str:
-    return "https://fonts.google.com/specimen/" + family.replace(" ", "+")
-
-
 def _outside_runtime() -> bool:
     """经技能入口运行，但还不在专用虚拟环境里。"""
     return (bool(os.environ.get("ACKS_OFFICE_SKILL_DIR"))
@@ -267,7 +263,7 @@ def _libreoffice_steps(managers: List[str]) -> List[List[str]]:
     return []
 
 
-def _plan(python_ok: bool, deps: List[Dict], pdf_font: Dict, theme: Dict, libreoffice: Dict) -> List[Dict]:
+def _plan(python_ok: bool, deps: List[Dict], pdf_font: Dict, themes: Dict[str, Dict], libreoffice: Dict) -> List[Dict]:
     """补齐计划：每一项都需要用户同意后才能执行；steps 是可直接执行的参数列表，不经过 shell。"""
     plan: List[Dict] = []
     if not python_ok:
@@ -287,11 +283,16 @@ def _plan(python_ok: bool, deps: List[Dict], pdf_font: Dict, theme: Dict, libreo
         plan.append({"id": "install_cjk_font", "why": "没有可嵌入 PDF 的中文字体，PDF 中文将由阅读器替换显示",
                      "steps": steps, "license": "SIL Open Font License 1.1（可免费商用）",
                      "network": True, "installs": True, "needs_consent": True})
-    if theme["missing"]:
-        plan.append({"id": "install_theme_fonts",
-                     "why": f"缺少主题字体：{', '.join(theme['missing'])}；Word/PPT 打开时会被替换成其他字体",
-                     "links": {family: _google_fonts_link(family) for family in theme["missing"]},
-                     "note": "需要安装到系统或用户字体目录，请先征得用户同意",
+    installable = {name: status["install"] for name, status in themes.items() if status.get("install")}
+    if installable:
+        steps = [_self_command() + ["fonts", "install", "--theme", name, "--system"] for name in installable]
+        if importlib.util.find_spec("fontTools") is None and not (missing and _outside_runtime()):
+            steps.insert(0, [sys.executable, "-m", "pip", "install", FONTTOOLS])
+        plan.append({"id": "install_theme_fonts", "optional": True,
+                     "why": "主题字体未安装时会用本机的备选字体：" + "；".join(
+                         f"{name} 可下载 {', '.join(keys)}" for name, keys in installable.items()),
+                     "steps": steps, "license": "SIL Open Font License 1.1（可免费商用）",
+                     "note": "--system 同时装到当前用户的字体目录，Word、PowerPoint 等软件也能用；只用到某个主题时只装那一项",
                      "network": True, "installs": True, "needs_consent": True})
     if libreoffice["callable"] is not True:
         steps = _libreoffice_steps(_system()["package_managers"])
@@ -312,7 +313,12 @@ def run(skill_dir: Optional[str] = None, network: bool = True, probe: bool = Tru
         pdf_font = fonts.pdf_fonts().describe()
     except Exception as exc:
         pdf_font = {"error": str(exc), "embedded": False}
-    theme = fonts.theme_font_status()
+    fonts.font_faces(write_cache=False)  # 只读：doctor 不写字体缓存
+    try:
+        theme = fonts.theme_font_status()
+        themes = {name: fonts.theme_font_status(name) for name in fonts.builtin_themes()}
+    except Exception as exc:  # 主题文件损坏等
+        theme, themes = {"error": str(exc), "present": [], "substituted": {}, "missing": [], "install": []}, {}
     libreoffice = _libreoffice(probe)
     fonts_ok = bool(pdf_font.get("embedded")) and not theme["missing"]
 
@@ -323,7 +329,7 @@ def run(skill_dir: Optional[str] = None, network: bool = True, probe: bool = Tru
     else:
         level = "L2" if libreoffice["callable"] is True else "L1"
 
-    plan = _plan(python_ok, deps, pdf_font, theme, libreoffice)
+    plan = _plan(python_ok, deps, pdf_font, themes, libreoffice)
     home = data_dir()
     return {
         "schema": SCHEMA,
@@ -333,7 +339,7 @@ def run(skill_dir: Optional[str] = None, network: bool = True, probe: bool = Tru
         "system": _system(),
         "python": _python(python_ok),
         "dependencies": deps,
-        "fonts": {"pdf_cjk": pdf_font, "theme": theme},
+        "fonts": {"pdf_cjk": pdf_font, "theme": theme, "themes": themes},
         "office_apps": [libreoffice] + _other_office_apps(),
         "agents": _agents(),
         "network": {name: _reachable(url) if network else None for name, url in NETWORK_CHECKS.items()},

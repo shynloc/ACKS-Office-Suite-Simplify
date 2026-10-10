@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Thom Jing (shynloc)", email = "mail@jintao.uk" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "python-docx>=1.1.0",
     "openpyxl>=3.1.2",
@@ -28,7 +28,6 @@ keywords = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -45,7 +44,7 @@ dev = ["pytest>=7.0", "fonttools>=4.40", "requests>=2.28", "PyYAML>=6.0"]
 
 [project.urls]
 Homepage = "https://github.com/shynloc/ACKS-Office-Suite-Simplify"
-Documentation = "https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v2.1.2/README.md"
+Documentation = "https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/v3.0.0/README.md"
 Issues = "https://github.com/shynloc/ACKS-Office-Suite-Simplify/issues"
 Changelog = "https://github.com/shynloc/ACKS-Office-Suite-Simplify/blob/main/CHANGELOG.md"
 
@@ -57,14 +56,9 @@ version = { attr = "acks_office.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
-exclude = ["acks_office.design_system.tests*"]
 
 [tool.setuptools.package-data]
-"acks_office.design_system" = ["tokens.json", "assets/*.png"]
-
-# 设计规范自带的测试只在源码里运行，不打进安装包
-[tool.setuptools.exclude-package-data]
-"acks_office.design_system" = ["tests/*"]
+"acks_office.themes" = ["builtin/*/*.json", "builtin/*/*.md", "builtin/*/assets/*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/acks_office/design_system/tests"]
+testpaths = ["tests"]

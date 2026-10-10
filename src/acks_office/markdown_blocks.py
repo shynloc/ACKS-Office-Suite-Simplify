@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from markdown_it import MarkdownIt
 
@@ -22,6 +22,7 @@ class Span:
 class Heading:
     level: int
     spans: List[Span]
+    attrs: Dict[str, str] = field(default_factory=dict)  # 标题末尾的 {label="…"} 属性
 
 
 @dataclass
@@ -97,7 +98,7 @@ def _parse(tokens, i: int, stop: Optional[str]) -> Tuple[List[Block], int]:
         if stop and t.type == stop:
             return blocks, i + 1
         if t.type == "heading_open":
-            blocks.append(Heading(int(t.tag[1]), _inline(tokens[i + 1])))
+            blocks.append(_heading(int(t.tag[1]), _inline(tokens[i + 1])))
             i += 3
         elif t.type == "paragraph_open":
             image = _only_image(tokens[i + 1])
@@ -169,6 +170,24 @@ def _parse_table(tokens, i: int) -> Tuple[Table, int]:
                 rows.append(row)
         i += 1
     return Table(header, rows, aligns), i + 1
+
+
+_ATTRS = re.compile(r"\s*\{((?:\s*[\w-]+\s*=\s*\"[^\"]*\")+)\s*\}\s*$")
+_ATTR = re.compile(r"([\w-]+)\s*=\s*\"([^\"]*)\"")
+
+
+def _heading(level: int, spans: List[Span]) -> Heading:
+    """标题末尾可以带属性，如 `# 一个季度的账本 {label="生意 · THE BUSINESS"}`。"""
+    if spans:
+        match = _ATTRS.search(spans[-1].text)
+        if match:
+            attrs = dict(_ATTR.findall(match.group(1)))
+            last = spans[-1]
+            rest = last.text[:match.start()]
+            spans = spans[:-1] + ([Span(rest, last.bold, last.italic, last.code, last.strike, last.link)]
+                                  if rest else [])
+            return Heading(level, spans, attrs)
+    return Heading(level, spans)
 
 
 def _quote(inner: List[Block]) -> Quote:

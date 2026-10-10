@@ -1,6 +1,6 @@
 # 安全说明
 
-文档对应版本：**2.1.2**。
+文档对应版本：**3.0.0**。
 
 本文说明该版本的数据、网络与文件处理行为；后续版本以对应版本的说明和实现为准。
 
@@ -11,7 +11,7 @@
   | 场景 | 访问的地址 | 说明 |
   |---|---|---|
   | `doctor` | `pypi.org`、`raw.githubusercontent.com` | 只发一个 HEAD 请求判断能否连通；`--no-network` 可关闭 |
-  | `fonts install` | `raw.githubusercontent.com`（或 `ACKS_OFFICE_DOWNLOAD_MIRROR`） | 地址固定到具体提交，下载后校验 SHA-256，不一致即放弃 |
+  | `fonts install` | `raw.githubusercontent.com`（或 `ACKS_OFFICE_DOWNLOAD_MIRROR`）、`github.com` 发布页 | 地址固定到具体提交或发布版本，下载后校验哈希（SHA-256，或固定提交下的 Git blob SHA-1），不一致即放弃 |
   | `send_email` | 你配置的 SMTP 服务器 | 见下文 |
   | 工作流 `data_extract` 的 API 数据源 | 你配置的地址 | 仅在工作流里配置了才会访问 |
 
@@ -21,8 +21,13 @@
   技能说明要求 Agent 先向用户说明并取得同意后才执行。
 - 经技能运行时，依赖安装到用户数据目录下的专用虚拟环境，不改动系统 Python；需要管理员权限的步骤
   （如 `sudo apt-get install libreoffice`）标为 `needs_admin`，交由用户自己执行。
-- 命令行默认不覆盖已有文件（需加 `--overwrite`）；`watermark` 默认写到新文件。
-  Python API 中 `add_watermark`、`add_transition_effects` 不传 `output_path` 时会覆盖原文件，与旧版一致。
+- 命令行默认不覆盖已有文件（需加 `--overwrite`）。加水印（命令行与 Python 接口）默认写到
+  `<原名>_watermarked.<扩展名>`，`add_transition_effects` 默认写到 `<原名>_transitions.pptx`，都不改原文件；
+  合并时任一输入不存在直接报错，不会只合并一部分。
+- `theme init` 只在用户主题目录（或 `--dir` 指定的目录）写主题文件；`--force` 只覆盖主题文件，不删除目录里的其他文件。
+- `fonts install --system` 把字体复制到当前用户的字体目录（macOS `~/Library/Fonts`、Windows
+  `%LOCALAPPDATA%\Microsoft\Windows\Fonts` 并登记到当前用户注册表、Linux `~/.local/share/fonts`），
+  不需要管理员权限；技能说明要求先征得用户同意。
 
 ## 邮件
 
@@ -44,7 +49,8 @@
 | 变量 | 作用 |
 |---|---|
 | `OFFICE_EMAIL_PASSWORD` / `ACKS_OFFICE_EMAIL_PASSWORD` | 邮箱密码或授权码 |
-| `ACKS_OFFICE_HOME` | 用户数据目录（字体、专用虚拟环境） |
+| `ACKS_OFFICE_HOME` | 用户数据目录（字体、用户主题、专用虚拟环境） |
+| `ACKS_OFFICE_THEMES` | 额外的主题目录 |
 | `ACKS_OFFICE_SOFFICE` | LibreOffice 可执行文件路径 |
 | `ACKS_OFFICE_PDF_FONT` / `ACKS_OFFICE_PDF_FONT_BOLD` | PDF 中文字体文件 |
 | `ACKS_OFFICE_DOWNLOAD_MIRROR` | 字体下载镜像 |

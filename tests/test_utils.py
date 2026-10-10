@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from acks_office import OfficeSuite, utils
+import acks_office
+from acks_office import utils
 from acks_office.docx import create_word
 
 
@@ -60,8 +61,8 @@ def test_real_conversion_to_pdf(tmp_path):
     create_word("季度报告", "正文", str(source))
     target = tmp_path / "out" / "报告.pdf"
 
-    result = OfficeSuite().convert(str(source), to="pdf", output_path=str(target))
+    result = acks_office.convert(str(source), "pdf", str(target))
 
-    assert result["success"] and result["engine"] == "libreoffice"
+    assert result["output_path"] == str(target) and result["engine"] == "libreoffice"
     assert target.read_bytes().startswith(b"%PDF")
     assert sorted(p.name for p in tmp_path.iterdir()) == ["out", "报告.docx"]  # 没有残留临时文件

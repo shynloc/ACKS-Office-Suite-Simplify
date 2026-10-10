@@ -80,7 +80,8 @@ def test_password_can_come_from_environment(monkeypatch, fake_smtp, variable):
     monkeypatch.delenv("ACKS_OFFICE_EMAIL_PASSWORD", raising=False)
     monkeypatch.delenv("OFFICE_EMAIL_PASSWORD", raising=False)
     monkeypatch.setenv(variable, "from-env")
-    suite = OfficeSuite()
+    with pytest.warns(DeprecationWarning):
+        suite = OfficeSuite()
     suite.config_email(smtp_server="smtp.example.com", smtp_port=465, username="me@example.com")
 
     assert suite.send_email(["a@example.com"], "周报", "正文")["success"]
@@ -91,7 +92,8 @@ def test_password_can_come_from_environment(monkeypatch, fake_smtp, variable):
 def test_missing_password_is_an_error_not_a_crash(monkeypatch):
     monkeypatch.delenv("ACKS_OFFICE_EMAIL_PASSWORD", raising=False)
     monkeypatch.delenv("OFFICE_EMAIL_PASSWORD", raising=False)
-    suite = OfficeSuite()
+    with pytest.warns(DeprecationWarning):
+        suite = OfficeSuite()
     suite.config_email(smtp_server="smtp.example.com", smtp_port=465, username="me@example.com")
     result = suite.send_email(["a@example.com"], "周报", "正文")
     assert not result["success"] and "密码" in result["error"]

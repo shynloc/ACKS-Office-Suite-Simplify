@@ -1,0 +1,24 @@
+{
+  "schema": "acks-office-fonts/1",
+  "families": {
+    "PingFang SC": {"license": "system", "fallback": ["Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Hiragino Sans GB", "WenQuanYi Micro Hei"]},
+    "Helvetica Neue": {"license": "system", "fallback": ["Segoe UI", "Arial", "Liberation Sans", "DejaVu Sans"]},
+    "Songti SC": {"license": "system", "fallback": ["SimSun", "Noto Serif CJK SC", "Source Han Serif SC", "STSong"]},
+    "Georgia": {"license": "system", "fallback": ["Times New Roman", "Liberation Serif", "DejaVu Serif"]},
+    "Kaiti SC": {"license": "system", "fallback": ["KaiTi", "STKaiti", "AR PL UKai CN"]},
+    "Menlo": {"license": "system", "fallback": ["Consolas", "DejaVu Sans Mono", "Liberation Mono", "Courier New"]},
+    "Noto Sans SC": {"license": "OFL-1.1", "install": "noto-sans-sc",
+                     "fallback": ["Source Han Sans SC", "思源黑体", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei"]},
+    "Noto Serif SC": {"license": "OFL-1.1", "install": "noto-serif-sc",
+                      "fallback": ["Source Han Serif SC", "思源宋体", "Noto Serif CJK SC", "Songti SC", "SimSun"]},
+    "Source Sans 3": {"license": "OFL-1.1", "install": "source-sans-3",
+                      "fallback": ["Source Sans Pro", "Helvetica Neue", "Segoe UI", "Arial"]},
+    "Source Serif 4": {"license": "OFL-1.1", "install": "source-serif-4",
+                       "fallback": ["Source Serif Pro", "Georgia", "Times New Roman"]},
+    "Fraunces": {"license": "OFL-1.1", "install": "fraunces", "fallback": ["Georgia", "Times New Roman"]},
+    "LXGW WenKai": {"license": "OFL-1.1", "install": "lxgw-wenkai",
+                    "fallback": ["霞鹜文楷", "LXGW WenKai GB", "Kaiti SC", "KaiTi", "STKaiti"]},
+    "JetBrains Mono": {"license": "OFL-1.1", "install": "jetbrains-mono",
+                       "fallback": ["Menlo", "Consolas", "DejaVu Sans Mono"]}
+  }
+}

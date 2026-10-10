@@ -1,17 +1,21 @@
 
 import os
+import warnings
 from typing import Optional, List, Dict, Any
-from . import docx, xlsx, pdf, pptx, email, utils
+from . import api, email
 
 class OfficeSuite:
     """
-    Office Suite 主类，统一接口处理所有Office文档操作
+    Office Suite 主类（已弃用，4.0 移除）：请改用 acks_office.create / extract / convert /
+    add_watermark / merge，出错时抛出异常，而不是返回 {"success": False} 字典。
     """
-    def __init__(self, config: Optional[Dict] = None, theme: str = "acks"):
+    def __init__(self, config: Optional[Dict] = None, theme: Any = None):
+        warnings.warn("OfficeSuite 已弃用，将在 4.0 移除；请改用 acks_office.create、extract、convert、"
+                      "add_watermark、merge 等函数", DeprecationWarning, stacklevel=2)
         self.config = config or {}
         self.email_config = None
-        self.theme = theme  # "acks"（符合 ACKS 设计规范）或 "default"（简单样式）
-        
+        self.theme = theme  # 主题名称或目录；None 为默认主题 neutral
+
     def create(self, doc_type: str, **kwargs) -> Dict[str, Any]:
         """
         创建Office文档
@@ -21,57 +25,24 @@ class OfficeSuite:
         Returns:
             处理结果字典
         """
-        doc_type = doc_type.lower()
-        handlers = {
-            "word": docx.create_word,
-            "docx": docx.create_word,
-            "excel": xlsx.create_excel,
-            "xlsx": xlsx.create_excel,
-            "pdf": pdf.create_pdf,
-            "pptx": pptx.create_pptx,
-            "powerpoint": pptx.create_pptx
-        }
-        
-        if doc_type not in handlers:
+        if doc_type.lower() not in api.KINDS:
             return {"success": False, "error": f"不支持的文档类型: {doc_type}"}
-        
         try:
             kwargs.setdefault("theme", self.theme)
-            result = handlers[doc_type](**kwargs)
+            result = api.create(doc_type, **kwargs)
             return {"success": True, **result}
         except Exception as e:
             return {"success": False, "error": f"创建文档失败: {str(e)}"}
             
     def convert(self, input_path: str, to: str, output_path: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-        """
-        格式转换
-        Args:
-            input_path: 输入文件路径
-            to: 目标格式：docx/pdf/pptx/xlsx/html等
-            output_path: 输出文件路径，可选，默认和输入同目录
-        Returns:
-            处理结果字典
-        """
+        """格式转换（需要 LibreOffice）；默认输出到原文件旁边。"""
         if not os.path.exists(input_path):
             return {"success": False, "error": f"输入文件不存在: {input_path}"}
-        
         try:
-            # 自动生成输出路径
-            if not output_path:
-                input_dir = os.path.dirname(input_path)
-                input_name = os.path.splitext(os.path.basename(input_path))[0]
-                output_path = os.path.join(input_dir, f"{input_name}.{to.lower()}")
-            
-            # 调用对应转换方法
-            target_ext = to.lower()
-            
-            # 基于libreoffice的通用转换（需要安装libreoffice）
-            result = utils.convert_with_libreoffice(input_path, target_ext, output_path, **kwargs)
-            return {"success": True, "output_path": output_path, **result}
-            
+            return {"success": True, **api.convert(input_path, to, output_path, **kwargs)}
         except Exception as e:
             return {"success": False, "error": f"格式转换失败: {str(e)}"}
-            
+
     def batch_convert(self, source_dir: str, target_dir: str, source_format: str, target_format: str, **kwargs) -> Dict[str, Dict]:
         """
         批量转换文档格式
@@ -105,31 +76,14 @@ class OfficeSuite:
         return results
         
     def add_watermark(self, input_path: str, watermark_text: str, output_path: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-        """
-        给文档添加水印
-        Args:
-            input_path: 输入文件路径
-            watermark_text: 水印文本
-            output_path: 输出文件路径
-        Returns:
-            处理结果字典
-        """
+        """给 PDF 或 Word 加水印；默认写到新文件 <原名>_watermarked.<扩展名>，不覆盖原文件。"""
         if not os.path.exists(input_path):
             return {"success": False, "error": f"输入文件不存在: {input_path}"}
-            
         try:
-            ext = os.path.splitext(input_path)[1].lower()
-            if ext == ".pdf":
-                result = pdf.add_watermark(input_path, watermark_text, output_path, **kwargs)
-            elif ext in [".docx", ".doc"]:
-                result = docx.add_watermark(input_path, watermark_text, output_path, **kwargs)
-            else:
-                return {"success": False, "error": f"不支持给该格式添加水印: {ext}"}
-                
-            return {"success": True, **result}
+            return {"success": True, **api.add_watermark(input_path, watermark_text, output_path, **kwargs)}
         except Exception as e:
             return {"success": False, "error": f"添加水印失败: {str(e)}"}
-            
+
     def batch_add_watermark(self, source_dir: str, target_dir: str, watermark_text: str, **kwargs) -> Dict[str, Dict]:
         """
         批量添加水印
@@ -351,20 +305,9 @@ class OfficeSuite:
         """
         if not os.path.exists(input_path):
             return {"success": False, "error": f"输入文件不存在: {input_path}"}
-            
         try:
-            ext = os.path.splitext(input_path)[1].lower()
-            if ext in [".xlsx", ".xls"]:
-                data = xlsx.extract_data(input_path, **kwargs)
-            elif ext in [".docx", ".doc"]:
-                data = docx.extract_text(input_path, **kwargs)
-            elif ext == ".pdf":
-                data = pdf.extract_text(input_path, **kwargs)
-            elif ext == ".pptx":
-                data = pptx.extract_text(input_path, **kwargs)
-            else:
-                return {"success": False, "error": f"不支持该格式的数据提取: {ext}"}
-                
-            return {"success": True, "data": data}
+            return {"success": True, "data": api.extract(input_path, **kwargs)}
+        except ValueError as e:
+            return {"success": False, "error": f"不支持该格式的数据提取: {e}"}
         except Exception as e:
             return {"success": False, "error": f"提取数据失败: {str(e)}"}

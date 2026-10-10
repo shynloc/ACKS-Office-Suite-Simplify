@@ -111,7 +111,9 @@ def test_suite_default_call_succeeds_and_leaves_source_untouched(workbook):
     with open(workbook, "rb") as f:
         before = f.read()
 
-    assert OfficeSuite().extract_data(workbook) == {"success": True, "data": FIRST}
+    with pytest.warns(DeprecationWarning):  # OfficeSuite 保留到 4.0，使用时提示弃用
+        suite = OfficeSuite()
+    assert suite.extract_data(workbook) == {"success": True, "data": FIRST}
 
     with open(workbook, "rb") as f:
         assert f.read() == before

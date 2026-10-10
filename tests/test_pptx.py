@@ -4,7 +4,7 @@ import pytest
 from pptx import Presentation
 from pptx.oxml.ns import qn
 
-from acks_office import OfficeSuite
+import acks_office
 from acks_office.pptx import TRANSITIONS, add_transition_effects, create_pptx
 
 SLIDES = [
@@ -29,9 +29,9 @@ def deck(tmp_path):
     return make
 
 
-def test_default_brand_is_kept(deck):
+def test_default_theme_has_no_brand(deck):
     flat = "\n".join(t for slide in _texts(deck()) for t in slide)
-    assert "ACKS STUDIO" in flat and "CONFIDENTIAL" in flat
+    assert "ACKS" not in flat and "CONFIDENTIAL" not in flat
 
 
 def test_empty_brand_removes_brand_everywhere(deck):
@@ -64,7 +64,10 @@ def test_transitions_are_written_once_per_slide(deck, tmp_path):
     src, out = deck(), tmp_path / "fade.pptx"
     result = add_transition_effects(str(src), str(out), effect="push", duration=1.5)
     assert result == {"output_path": str(out), "slides": 4, "effect": "push"}
-    add_transition_effects(str(out), effect="fade", duration=0.3)  # 再设一次会替换，不会叠加
+    add_transition_effects(str(out), str(out), effect="fade", duration=0.3)  # 再设一次会替换，不会叠加
+    before = src.read_bytes()
+    default = add_transition_effects(str(src), effect="wipe")  # 3.0：默认写到新文件，不改原文件
+    assert default["output_path"] == str(src.with_name("deck_transitions.pptx")) and src.read_bytes() == before
 
     for found in _transitions(out):
         (transition,) = found
@@ -87,5 +90,4 @@ def test_unknown_effect_is_rejected(deck):
 
 
 def test_extract_returns_text_per_slide(deck):
-    result = OfficeSuite().extract_data(str(deck()))
-    assert result["success"] and "核心结论" in result["data"][3]
+    assert "核心结论" in acks_office.extract(str(deck()))[3]

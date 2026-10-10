@@ -12,7 +12,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
 
@@ -76,42 +76,66 @@ def _load_json(file: str) -> Any:
         raise CliError("INVALID_INPUT", f"{file} 不是有效的 JSON：{exc}") from None
 
 
-def _load_table(file: str) -> List[List[Any]]:
-    """Excel 数据：JSON 二维数组（第一行为表头），或 CSV。"""
+def _load_table(file: str) -> Tuple[Optional[List[Any]], Optional[List[Dict[str, Any]]], Dict[str, Any]]:
+    """Excel 数据 → (data, sheets, meta)。
+
+    JSON 二维数组（第一行为表头）、对象数组（每行一个对象，键为表头，和 extract 的输出一样）、
+    {"meta": {...}, "sheets": [...]}（多张工作表），或 CSV。
+    """
     if file != "-" and file.lower().endswith(".csv"):
         rows = list(csv.reader(_read_text(None, file).splitlines()))
-        return rows[:1] + [[_csv_value(v) for v in row] for row in rows[1:]]
+        return rows[:1] + [[_csv_value(v) for v in row] for row in rows[1:]], None, {}
     data = _load_json(file)
-    if not (isinstance(data, list) and all(isinstance(r, list) for r in data)):
-        raise CliError("INVALID_INPUT", "Excel 数据需要是二维数组，例如 [[\"部门\", \"1月\"], [\"一部\", 150]]")
-    return data
+    if isinstance(data, dict):
+        meta, sheets = data.get("meta") or {}, data.get("sheets")
+        if not (isinstance(sheets, list) and sheets and isinstance(meta, dict)
+                and all(isinstance(s, dict) and isinstance(s.get("rows", []), list) for s in sheets)):
+            raise CliError("INVALID_INPUT", "多张工作表需要写成 {\"sheets\": [{\"name\": \"Q3\", "
+                                            "\"header\": [\"部门\", \"7月\"], \"rows\": [[\"一部\", 150]]}]}")
+        return None, sheets, meta
+    if isinstance(data, list) and (all(isinstance(r, list) for r in data) or
+                                   (data and all(isinstance(r, dict) for r in data))):
+        return data, None, {}
+    raise CliError("INVALID_INPUT", "Excel 数据需要是二维数组，例如 [[\"部门\", \"1月\"], [\"一部\", 150]]；"
+                                    "也可以是对象数组，或 {\"sheets\": [...]}（多张工作表）")
 
 
-def _load_slides(file: str) -> List[Dict[str, Any]]:
+def _load_slides(file: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """幻灯片 JSON：数组，或 {"meta": {...}, "slides": [...]}（meta 为整套的元数据）。"""
     data = _load_json(file)
-    if not (isinstance(data, list) and data and all(isinstance(s, dict) for s in data)):
-        raise CliError("INVALID_INPUT", "幻灯片需要是非空 JSON 数组，例如 "
+    meta: Dict[str, Any] = {}
+    if isinstance(data, dict):
+        meta = data.get("meta") or {}
+        data = data.get("slides")
+    if not (isinstance(data, list) and data and all(isinstance(s, dict) for s in data)
+            and isinstance(meta, dict)):
+        raise CliError("INVALID_INPUT", "幻灯片需要是非空 JSON 数组，或 {\"meta\": {...}, \"slides\": [...]}，例如 "
                                         "[{\"title\": \"封面\", \"layout\": \"title\"}, {\"title\": \"要点\", \"content\": \"…\"}]")
-    return data
+    return data, meta
 
 
-def _suite(theme: str):
+def _call(action, code: str) -> Any:
+    """调用 acks_office.api 的函数，把异常换成统一的错误码。"""
+    from .themes import ThemeError
     try:
-        from .core import OfficeSuite
+        return action()
+    except (CliError, ThemeError):
+        raise
     except ImportError as exc:
         raise CliError("DEPENDENCY_MISSING", f"缺少依赖：{exc.name or exc}",
                        "运行 doctor 命令查看缺少哪些依赖及安装步骤") from None
-    return OfficeSuite(theme=theme)
-
-
-def _from_result(result: Dict, code: str, output: Optional[str] = None) -> Dict:
-    if not result.get("success"):
-        message = result.get("error", "未知错误")
+    except FileNotFoundError as exc:
+        raise CliError("FILE_NOT_FOUND", str(exc)) from None
+    except Exception as exc:
+        message = str(exc) or type(exc).__name__
         if "LibreOffice" in message and "未找到" in message:
-            raise CliError("ENGINE_UNAVAILABLE", message, "运行 acks-office doctor 查看安装方式")
-        raise CliError(code, message)
-    data = {k: v for k, v in result.items() if k not in ("success", "warnings")}
-    return _envelope(True, data, [_artifact(output)] if output else [], result.get("warnings"))
+            raise CliError("ENGINE_UNAVAILABLE", message, "运行 acks-office doctor 查看安装方式") from None
+        raise CliError(code, message) from None
+
+
+def _done(result: Dict, output: Optional[str] = None) -> Dict:
+    warnings = result.pop("warnings", None)
+    return _envelope(True, result, [_artifact(output)] if output else [], warnings)
 
 
 # ---------------------------------------------------------------- 命令
@@ -137,29 +161,61 @@ def cmd_create(args) -> Dict:
         raise CliError("INVALID_INPUT", f"输出文件应以 {suffix} 结尾：{args.output}",
                        f"例如 -o {Path(args.output).stem or '输出'}{suffix}")
     _check_output(args.output, args.overwrite)
-    kwargs: Dict[str, Any] = {"output_path": args.output, "title": args.title or Path(args.output).stem}
+    from .themes import load_theme
+    load_theme(args.theme)  # 主题不存在时直接报 THEME_NOT_FOUND
+    kwargs: Dict[str, Any] = {"output_path": args.output, "font_policy": args.font_policy}
     for key in ("brand_name", "footer_label", "subtitle"):
         if getattr(args, key) is not None:
             kwargs[key] = getattr(args, key)
+    for item in args.meta or []:
+        key, sep, value = item.partition("=")
+        if not sep or not key.strip():
+            raise CliError("INVALID_INPUT", f"--meta 应写成 键=值：{item}", "例如 --meta author=经营分析部")
+        kwargs[key.strip()] = value.replace("\\n", "\n")
 
+    title = args.title
     if kind in ("word", "pdf"):
         kwargs["content"] = _read_text(args.content, args.content_file)
+        if title is None:
+            from .render.common import split_front_matter
+            title = split_front_matter(kwargs["content"])[0].get("title")
         if args.content_file and args.content_file != "-":
             kwargs["base_dir"] = str(Path(args.content_file).resolve().parent)
         if kind == "pdf" and args.font:
             kwargs["font"] = args.font
     elif kind == "excel":
         if not args.data_file:
-            raise CliError("INVALID_INPUT", "生成 Excel 需要 --data-file（JSON 二维数组或 CSV）")
-        kwargs["data"] = _load_table(args.data_file)
+            raise CliError("INVALID_INPUT", "生成 Excel 需要 --data-file（JSON 二维数组、对象数组、{\"sheets\": [...]} 或 CSV）")
+        data, sheets, table_meta = _load_table(args.data_file)
+        if sheets is not None:
+            kwargs["sheets"] = sheets
+        else:
+            kwargs["data"] = data
         kwargs["create_chart"] = args.chart
+        for key, value in table_meta.items():
+            if key == "title" and title is None:
+                title = value
+            elif key != "title":
+                kwargs.setdefault(key, value)
     elif kind == "pptx":
         if not args.slides_file:
             raise CliError("INVALID_INPUT", "生成 PPT 需要 --slides-file（JSON 数组，每项含 title、content、layout）")
-        kwargs["slides"] = _load_slides(args.slides_file)
+        kwargs["slides"], deck_meta = _load_slides(args.slides_file)
+        for key, value in deck_meta.items():
+            if key == "title" and title is None:
+                title = value
+            elif key != "title":
+                kwargs.setdefault(key, value)
 
+    if kind == "excel":
+        # 表格的标题写在第 1 行：没给标题就不加标题行，工作表名用文件名
+        kwargs["title"] = title or kwargs.get("title")
+        kwargs.setdefault("sheet_name", Path(args.output).stem)
+    else:
+        kwargs["title"] = title or kwargs.get("title") or Path(args.output).stem
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    return _from_result(_suite(args.theme).create(kind, **kwargs), "CREATE_FAILED", args.output)
+    from . import api
+    return _done(_call(lambda: api.create(kind, theme=args.theme, **kwargs), "CREATE_FAILED"), args.output)
 
 
 def cmd_extract(args) -> Dict:
@@ -172,18 +228,17 @@ def cmd_extract(args) -> Dict:
     kwargs = {}
     if args.sheet is not None:
         kwargs["sheet_name"] = int(args.sheet) if args.sheet.isdigit() else args.sheet
-    result = _suite("acks").extract_data(args.file, **kwargs)
-    if not result.get("success"):
-        raise CliError("EXTRACT_FAILED", result.get("error", "未知错误"))
-    return _envelope(True, {"format": suffix.lstrip("."), _EXTRACT_KEY[suffix]: result["data"]})
+    from . import api
+    data = _call(lambda: api.extract(args.file, **kwargs), "EXTRACT_FAILED")
+    return _envelope(True, {"format": suffix.lstrip("."), _EXTRACT_KEY[suffix]: data})
 
 
 def cmd_convert(args) -> Dict:
     _check_input(args.file)
     output = args.output or str(Path(args.file).with_suffix("." + args.to.split(":")[0]))
     _check_output(output, args.overwrite)
-    return _from_result(_suite("acks").convert(args.file, to=args.to, output_path=output),
-                        "CONVERSION_FAILED", output)
+    from . import api
+    return _done(_call(lambda: api.convert(args.file, args.to, output), "CONVERSION_FAILED"), output)
 
 
 def cmd_watermark(args) -> Dict:
@@ -191,39 +246,81 @@ def cmd_watermark(args) -> Dict:
     source = Path(args.file)
     output = args.output or str(source.with_name(f"{source.stem}_watermarked{source.suffix}"))
     _check_output(output, args.overwrite)
-    return _from_result(_suite("acks").add_watermark(args.file, args.text, output_path=output),
-                        "WATERMARK_FAILED", output)
+    from . import api
+    return _done(_call(lambda: api.add_watermark(args.file, args.text, output), "WATERMARK_FAILED"), output)
 
 
 def cmd_merge(args) -> Dict:
     _check_output(args.output, args.overwrite)
-    if not any(Path(f).is_file() for f in args.files):
-        raise CliError("FILE_NOT_FOUND", f"要合并的文件都不存在：{', '.join(args.files)}")
-    suffixes = {Path(f).suffix.lower() for f in args.files}
-    if suffixes == {".pdf"}:
-        from .pdf import merge_pdfs as merge
-    elif suffixes == {".docx"}:
-        from .docx import merge_documents as merge
-    else:
+    missing = [f for f in args.files if not Path(f).is_file()]
+    if missing:
+        raise CliError("FILE_NOT_FOUND", f"要合并的文件不存在：{', '.join(missing)}", "检查文件路径后重试；不会只合并一部分")
+    if len({Path(f).suffix.lower() for f in args.files}) != 1 or Path(args.files[0]).suffix.lower() not in (".pdf", ".docx"):
         raise CliError("UNSUPPORTED_FORMAT", "只能合并同一种格式：全部 .pdf 或全部 .docx")
-    result = merge(args.files, args.output)
-    warnings = list(result.pop("warnings", []))
-    if result.get("skipped"):
-        warnings.append({"code": "INPUT_SKIPPED", "message": f"以下文件不存在，已跳过：{', '.join(result['skipped'])}"})
-    return _envelope(True, result, [_artifact(args.output)], warnings)
+    from . import api
+    return _done(_call(lambda: api.merge(args.files, args.output), "MERGE_FAILED"), args.output)
 
 
 def cmd_fonts(args) -> Dict:
     from . import fonts
     if args.action == "install":
-        if not args.name:
-            raise CliError("INVALID_INPUT", f"请指定字体，可选：{', '.join(fonts.CATALOG)}")
-        try:
-            data = fonts.install_font(args.name, progress=lambda msg: print(msg, file=sys.stderr))
-        except (ValueError, RuntimeError) as exc:
-            raise CliError("FONT_INSTALL_FAILED", str(exc)) from None
-        return _envelope(True, data, [_artifact(f) for f in data["files"]])
+        if args.theme:
+            from .themes import load_theme
+            load_theme(args.theme)  # 主题不存在时报 THEME_NOT_FOUND
+            keys = fonts.theme_font_status(args.theme)["install"]
+            if args.name:
+                keys = [k for k in keys if k == args.name] or [args.name]
+        elif args.name:
+            keys = [args.name]
+        else:
+            raise CliError("INVALID_INPUT", f"请指定字体（{', '.join(fonts.CATALOG)}）或 --theme 主题",
+                           "例如 fonts install noto-sans-sc，或 fonts install --theme folio --system")
+        installed, artifacts = [], []
+        for key in keys:
+            try:
+                data = fonts.install_font(key, progress=lambda msg: print(msg, file=sys.stderr), system=args.system)
+            except (ValueError, RuntimeError, OSError) as exc:
+                raise CliError("FONT_INSTALL_FAILED", f"{key}：{exc}") from None
+            installed.append(data)
+            artifacts += [_artifact(f) for f in data["files"]]
+        if len(installed) == 1 and not args.theme:
+            return _envelope(True, installed[0], artifacts)
+        return _envelope(True, {"theme": args.theme, "installed": installed}, artifacts)
     return _envelope(True, fonts.fonts_report())
+
+
+def cmd_theme(args) -> Dict:
+    from . import themes
+    if args.action == "list":
+        return _envelope(True, {"default": themes.DEFAULT_THEME, "user_dir": str(themes.user_theme_dir()),
+                                "themes": themes.list_themes()})
+    if not args.name:
+        example = "my-brand --extends slate --accent #0B6E4F" if args.action == "init" else "slate"
+        raise CliError("USAGE_ERROR", "请指定主题名称或主题目录", f"例如 theme {args.action} {example}")
+    if args.action == "show":
+        return _envelope(True, themes.load_theme(args.name).describe())
+    if args.action == "init":
+        from .themes.scaffold import init_theme
+        data = init_theme(args.name, extends=args.extends, accent=args.accent, brand=args.brand,
+                          title=args.title, directory=args.dir, force=args.force)
+        return _envelope(True, data, [_artifact(f) for f in data["files"]], data["validation"]["warnings"])
+    if args.action == "preview":
+        from .themes.preview import FORMATS, build_preview
+        formats = [f.strip() for f in (args.formats or ",".join(FORMATS)).split(",") if f.strip()]
+        out_dir = args.output or f"{Path(args.name).name}-preview"
+        try:
+            data = build_preview(args.name, out_dir, formats)
+        except ValueError as exc:
+            raise CliError("INVALID_INPUT", str(exc)) from None
+        return _envelope(True, data, [_artifact(f) for f in data["files"].values()],
+                         data["warnings"] + data["validation"]["warnings"])
+    report = themes.validate_theme(args.name, check_installed=not args.no_fonts)
+    if report["ok"]:
+        return _envelope(True, report, warnings=report["warnings"])
+    first = report["errors"][0]
+    return _envelope(False, report, warnings=report["warnings"],
+                     error={"code": "THEME_INVALID", "message": f"主题 {report['theme']} 有 {len(report['errors'])} 处错误",
+                            "hint": f"{first['path']}：{first['message']}"})
 
 
 # ---------------------------------------------------------------- 入口
@@ -262,12 +359,17 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--content-file", help="正文 Markdown 文件，- 表示从标准输入读取")
     p.add_argument("--data-file", help="Excel 数据：JSON 二维数组或 CSV")
     p.add_argument("--slides-file", help="PPT 幻灯片：JSON 数组")
-    p.add_argument("--theme", default="acks", choices=["acks", "default"])
+    p.add_argument("--theme", default=None,
+                   help="主题名称（默认 neutral，另有 slate、folio 或已安装的主题）或主题目录")
+    p.add_argument("--meta", action="append", metavar="KEY=VALUE",
+                   help="文档元数据，可重复：kicker、author、date、version、issue、lede 等（也可写在正文 front matter）")
+    p.add_argument("--font-policy", default="local", choices=["local", "theme"],
+                   help="local：缺主题字体时改用本机字体；theme：总是写主题字体名")
     p.add_argument("--brand-name", help="品牌名，传空字符串去掉品牌")
     p.add_argument("--footer-label", help="页脚文字")
     p.add_argument("--subtitle", help="封面副标题（Word）")
     p.add_argument("--font", help="PDF 中文字体文件路径（TrueType）")
-    p.add_argument("--chart", action="store_true", help="Excel 附柱状图（default 主题）")
+    p.add_argument("--chart", action="store_true", help="Excel 附图表（数值取第一个数字列）")
     p.add_argument("--overwrite", action="store_true", help="允许覆盖已有文件")
     p.set_defaults(func=cmd_create)
 
@@ -296,19 +398,55 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--overwrite", action="store_true")
     p.set_defaults(func=cmd_merge)
 
+    p = sub.add_parser("theme", parents=[common], help="查看、校验、新建主题，生成主题样张")
+    p.add_argument("action", choices=["list", "show", "validate", "init", "preview"])
+    p.add_argument("name", nargs="?", help="主题名称（如 slate）或主题目录；init 时为新主题的名称")
+    p.add_argument("--no-fonts", action="store_true", help="校验时不检查本机字体")
+    p.add_argument("--extends", default="neutral", help="init：继承的主题，默认 neutral")
+    p.add_argument("--accent", help="init：强调色，如 #0B6E4F")
+    p.add_argument("--brand", help="init：品牌名，用在封面和页眉页脚")
+    p.add_argument("--title", help="init：主题的显示名称")
+    p.add_argument("--dir", help="init：主题目录，默认放在用户主题目录（之后可按名称使用）")
+    p.add_argument("--force", action="store_true", help="init：目录已存在时覆盖主题文件")
+    p.add_argument("-o", "--output", help="preview：样张目录，默认 <主题>-preview")
+    p.add_argument("--formats", help="preview：要生成的格式，逗号分隔，默认 html,docx,pdf,pptx,xlsx")
+    p.set_defaults(func=cmd_theme)
+
     p = sub.add_parser("fonts", parents=[common], help="查看字体情况或安装开源字体")
     p.add_argument("action", choices=["list", "install"])
     p.add_argument("name", nargs="?", help="要安装的字体，如 noto-sans-sc")
+    p.add_argument("--theme", help="安装某个主题缺少的全部字体，如 --theme folio")
+    p.add_argument("--system", action="store_true",
+                   help="同时装到当前用户的字体目录，Word、PowerPoint 等软件也能用（不需要管理员权限）")
     p.set_defaults(func=cmd_fonts)
     return parser
 
 
+def _print_theme_report(report: Dict) -> None:
+    status = "通过" if report["ok"] else f"未通过：{len(report['errors'])} 处错误"
+    print(f"主题 {report['theme']}（{report.get('title', '')}）校验{status}，{len(report['warnings'])} 条提醒")
+    for item in report["errors"]:
+        print(f"  错误 {item['path']}：{item['message']}")
+    for item in report["warnings"]:
+        print(f"  提醒 {item['path']}：{item['message']}")
+
+
 def _print_human(command: str, env: Dict) -> None:
+    if command == "theme" and isinstance(env["data"], dict) and "contrast" in env["data"]:
+        _print_theme_report(env["data"])
+        return
     if not env["ok"]:
         err = env["error"]
         print(f"错误：{err['message']}")
         if err.get("hint"):
             print(f"提示：{err['hint']}")
+        for warning in env["warnings"]:
+            print(f"注意：{warning.get('message', warning)}")
+        return
+    if command == "theme" and isinstance(env["data"], dict) and "themes" in env["data"]:
+        for t in env["data"]["themes"]:
+            mark = "（默认）" if t["name"] == env["data"]["default"] else ""
+            print(f"{t['name']:12} {t.get('title', '')}{mark} · {t['source']} · {t.get('description', '')}")
         return
     if command == "doctor":
         r = env["data"]
@@ -347,9 +485,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             env = args.func(args)
         except CliError as exc:
             env = _error(exc)
-        except Exception as exc:  # 未预料的错误也按统一格式返回
-            env = _error(CliError("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}",
-                                  "可先运行 acks-office doctor 检查环境"))
+        except Exception as exc:  # 主题错误带自己的错误码；其他未预料的错误也按统一格式返回
+            from .themes import ThemeError
+            if isinstance(exc, ThemeError):
+                env = _error(CliError(exc.code, exc.message, exc.hint))
+            else:
+                env = _error(CliError("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}",
+                                      "可先运行 acks-office doctor 检查环境"))
         status = 0 if env["ok"] else 1
     if args.json:
         # Windows 管道里控制台编码不一定是 UTF-8，此时输出转义后的 JSON，保证可解析

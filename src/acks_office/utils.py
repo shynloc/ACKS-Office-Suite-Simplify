@@ -1,6 +1,7 @@
 
 import glob
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -50,6 +51,39 @@ def find_soffice() -> Optional[str]:
     return None
 
 
+def _seed_profile(profile: Path) -> int:
+    """macOS 上的 LibreOffice 只认本地化后的字体名（中文系统里是「苹方-简」，不认「PingFang SC」）：
+    把英文名 → 本地化名写进这次转换用的临时配置的字体替换表。返回写入的条数。"""
+    try:
+        from .fonts import localized_family_names
+        pairs = localized_family_names()
+    except Exception:
+        pairs = {}
+    if not pairs:
+        return 0
+    from xml.sax.saxutils import escape
+    invalid = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff\ud800-\udfff]")
+    pairs = {a: b for a, b in pairs.items() if not invalid.search(a + b)}
+    path = "/org.openoffice.Office.Common/Font/Substitution"
+    items = [f'<item oor:path="{path}"><prop oor:name="Replacement" oor:op="fuse"><value>true</value></prop></item>']
+    for i, (name, local) in enumerate(sorted(pairs.items())):
+        items.append(
+            f'<item oor:path="{path}/FontPairs"><node oor:name="_{i}" oor:op="replace">'
+            '<prop oor:name="Always" oor:op="fuse"><value>true</value></prop>'
+            '<prop oor:name="OnScreenOnly" oor:op="fuse"><value>false</value></prop>'
+            f'<prop oor:name="ReplaceFont" oor:op="fuse"><value>{escape(name)}</value></prop>'
+            f'<prop oor:name="SubstituteFont" oor:op="fuse"><value>{escape(local)}</value></prop>'
+            '</node></item>')
+    user = profile / "user"
+    user.mkdir(parents=True, exist_ok=True)
+    (user / "registrymodifications.xcu").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" '
+        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n' + "\n".join(items) + "\n</oor:items>\n",
+        encoding="utf-8")
+    return len(pairs)
+
+
 def convert_with_libreoffice(input_path: str, target_format: str, output_path: str, **kwargs) -> Dict[str, Any]:
     """
     使用LibreOffice进行格式转换，支持大部分Office格式互转
@@ -68,6 +102,7 @@ def convert_with_libreoffice(input_path: str, target_format: str, output_path: s
     with tempfile.TemporaryDirectory(prefix="acks-office-") as tmp:
         out_dir = Path(tmp) / "out"
         # 独立的用户配置目录：用户正开着 LibreOffice 时，共用配置会让无界面转换静默失败
+        _seed_profile(Path(tmp) / "profile")
         profile = (Path(tmp) / "profile").as_uri()
         cmd = [soffice, f"-env:UserInstallation={profile}", "--headless", "--norestore",
                "--convert-to", target_format, "--outdir", str(out_dir), os.path.abspath(input_path)]
